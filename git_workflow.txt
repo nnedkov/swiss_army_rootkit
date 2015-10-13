@@ -1,0 +1,42 @@
+Our Git workflow
+
+Before you start working:
+1) make sure you are on your branch
+$ git branch
+* matei
+  master
+
+if not, type
+$git checkout Matei
+
+
+When you finish your work:
+1) commit the changes you desire
+$ git add changed_files_you_want_to_commit
+$ git commit
+
+2) switch to the master branch
+$ git checkout master
+
+3) pull any new incoming commits from the remote master
+$ git pull origin master
+
+4) rebase your working branch on top of the master branch
+$ git checkout matei
+$ git rebase master
+
+5) go back to the master branch and do a fast-forward merge with the working branch
+$ git checkout master (change currently working branch to "master")
+$ git merge matei
+
+6) push the changes of the master branch to the remote repository
+(assuming that you are on master branch)
+$ git push origin master
+
+7) push the changes of the branch Hazboun to the remote repository
+(assuming that you are on master branch)
+$ git checkout matei
+$ git push -f origin matei (force push changes to "origin/matei")
+
+
+PS: you can find a visual explanation of the above in this link: https://git-scm.com/book/en/v2/Git-Branching-Rebasing
