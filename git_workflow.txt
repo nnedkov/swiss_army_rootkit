@@ -7,7 +7,7 @@ $ git branch
   master
 
 if not, type
-$git checkout Matei
+$ git checkout matei
 
 
 When you finish your work:
