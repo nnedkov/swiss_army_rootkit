@@ -21,7 +21,7 @@
 #   Usage: This script will create a header file named `sysmap.h` that maps   #
 #          the kernel symbol names to their addresses in memory. Only         #
 #          symbols of type D (initialized writable data), R (read-only        #
-#          data) and T (code) are being mapped.                               #
+#          data) and T (code) are being considered.                           #
 #                                                                             #
 ###############################################################################
 
@@ -63,14 +63,22 @@ function create_sysmap_header_file() {
 	print "dark_green" "[DONE] - found under path: $SYSTEM_MAP_FILE"
 
 	print "dark_green" "(2/2) Creating header file 'sysmap.h'..."
-	# Filter out symbols that don't interest us and output the rest in syntax valid expressions for the preprocessor
-	cat $SYSTEM_MAP_FILE | awk '($2=="D" || $2=="R" || $2=="T") {
-									printf("#ifndef %s\n#define %s 0x%s\n#endif\n\n",
-									toupper($3),
-									toupper($3),
-									$1) }' > ./sysmap.h
-	print "dark_green" "[DONE] - find under path: ./sysmap.h"
-	echo
+	HEADER_FILE=./sysmap.h
+	cat > $HEADER_FILE <<- EOM
+	#ifndef SYSMAP_H
+	#define SYSMAP_H
+
+	EOM
+	# collect only symbols of interest and dump them within macro definitions in the header file
+	cat $SYSTEM_MAP_FILE | awk '($2=="D" || $2=="R" || $2=="T") { printf("#define %s 0x%s\n",
+                                                                         toupper($3),
+                                                                         $1) }' >> $HEADER_FILE
+	cat >> $HEADER_FILE <<- EOM
+
+	#endif
+
+	EOM
+	print "dark_green" "[DONE] - find under path: $HEADER_FILE\n"
 }
 
 ###################################################################################################
