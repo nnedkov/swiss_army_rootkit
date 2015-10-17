@@ -1,0 +1,9 @@
+FILES INCLUDED:
+	* sysmap.sh - bash script which creates header file `sysmap.h`
+	* sysmap.h - header file generated from script `sysmap.sh`
+	* README
+
+HOW TO:
+	- Run sysmap.sh script (assuming the script is in our current directory):
+		$ chmod +x sysmap.sh   # Add execution permission to script
+		$ ./sysmap.sh
