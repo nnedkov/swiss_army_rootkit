@@ -1,9 +1,35 @@
-FILES INCLUDED:
-	* sysmap.sh - bash script which creates header file `sysmap.h`
-	* sysmap.h - header file generated from script `sysmap.sh`
-	* README
 
-HOW TO:
-	- Run sysmap.sh script (assuming the script is in our current directory):
-		$ chmod +x sysmap.sh   # Add execution permission to script
-		$ ./sysmap.sh
++---------------------------------------------------------------------------------------+
+| Files included  | Description                                                         |
++---------------------------------------------------------------------------------------+
+| sysmap.sh       | a bash script that creates a header file named `sysmap.h` that maps |
+|                 | the kernel symbol names to their addresses in memory. Only symbols  |
+|                 | of type D (initialized writable data), R (read-only data) and T     |
+|                 | (code) are being considered.                                        |
++-----------------+---------------------------------------------------------------------+
+| sysmap.h        | header file generated from script `sysmap.sh` run on a 4.1.10       |
+|                 | Kernel                                                              |
++-----------------+---------------------------------------------------------------------+
+| simple_module.c | a kernel module that outputs welcome and goodbye messages when it   |
+|                 | is loaded and unloaded respectively. Additionaly, when loaded, it   |
+|                 | outputs the number of processes in the system.                      |
++-----------------+---------------------------------------------------------------------+
+| Makefile        | a Makefile that compiles the module `simple_module.c`               |
++-----------------+---------------------------------------------------------------------+
+| README          | current file                                                        |
++-----------------+---------------------------------------------------------------------+
+
+
+
++---------------------------------------------------------------------------------------+
+| How to...                                         | Bash command                      |
++---------------------------------------------------------------------------------------+
+| run sysmap.sh script (assuming the script is in   | # add execution permission        |
+| our current directory)                            | $ chmod +x sysmap.sh              |
+|                                                   | $ ./sysmap.sh                     |
++-----------------+---------------------------------------------------------------------+
+| compile Linux Kernel Module `simple_module.c`     | $ make                            |
++-----------------+---------------------------------------------------------------------+
+| clean directory                                   | $ make clean                      |
++-----------------+---------------------------------------------------------------------+
+
