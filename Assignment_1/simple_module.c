@@ -65,10 +65,8 @@ void print_nr_procs(void)
 	int nr_procs = 0;
 	struct task_struct *task;
 
-	for_each_process(task) {
-		printk(KERN_INFO "%s [%d]\n", task->comm, task->pid);
+	for_each_process(task)
 		nr_procs++;
-	}
 
 	printk(KERN_INFO "Current number of processes in the system is: %d\n", nr_procs);
 }
