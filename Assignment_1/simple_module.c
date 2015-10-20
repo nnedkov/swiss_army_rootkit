@@ -72,4 +72,3 @@ void print_nr_procs(void)
 }
 
 MODULE_LICENCE("GPL")
-
