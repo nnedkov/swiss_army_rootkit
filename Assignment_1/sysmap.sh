@@ -70,9 +70,10 @@ function create_sysmap_header_file() {
 
 	EOM
 	# collect only symbols of interest and dump them within macro definitions in the header file
-	cat $SYSTEM_MAP_FILE | awk '($2=="D" || $2=="R" || $2=="T") { printf("#define %s 0x%s\n",
-                                                                         toupper($3),
-                                                                         $1) }' >> $HEADER_FILE
+	cat $SYSTEM_MAP_FILE | awk '($2=="D" || $2=="R" || $2=="T" || $2=="d" || $2=="r" || $2=="t")
+								{ printf("#define ROOTKIT_%s 0x%s\n", 
+                                          toupper($3),
+                                          $1) }' >> $HEADER_FILE
 	cat >> $HEADER_FILE <<- EOM
 
 	#endif
