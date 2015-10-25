@@ -71,4 +71,4 @@ void print_nr_procs(void)
 	printk(KERN_INFO "Current number of processes in the system is: %d\n", nr_procs);
 }
 
-MODULE_LICENCE("GPL")
+MODULE_LICENCE("GPL");
