@@ -5,17 +5,17 @@
 +---------------------------------------------------------------------------------------+
 | sysmap.sh       | a bash script that creates a header file named `sysmap.h` that maps |
 |                 | the kernel symbol names to their addresses in memory. Only symbols  |
-|                 | of type D (initialized writable data), R (read-only data) and T     |
-|                 | (code) are being considered.                                        |
+|                 | of type d/D (initialized writable data), r/R (read-only data) and   |
+|                 | t/T (code) are being considered.                                    |
 +-----------------+---------------------------------------------------------------------+
 | sysmap.h        | header file generated from script `sysmap.sh` run on a 4.1.10       |
 |                 | kernel                                                              |
 +-----------------+---------------------------------------------------------------------+
-| simple_module.c | a kernel module that outputs welcome and goodbye messages when it   |
-|                 | is loaded and unloaded respectively. Additionaly, when loaded, it   |
-|                 | outputs the number of processes in the system.                      |
+| interceptor.c   | a kernel module that hooks the read system call and outputs the     |
+|                 | intercepted data when reading from stdin. Additionaly, when a magic |
+|                 | command gets intercepted it performs a panic-less system reboot.    |
 +-----------------+---------------------------------------------------------------------+
-| Makefile        | a Makefile that compiles the module `simple_module.c`               |
+| Makefile        | a Makefile that compiles the module `interceptor.c`                 |
 +-----------------+---------------------------------------------------------------------+
 | README          | current file                                                        |
 +-----------------+---------------------------------------------------------------------+
@@ -34,4 +34,3 @@
 +-----------------+---------------------------------------------------------------------+
 | clean directory                                   | $ make clean                      |
 +-----------------+---------------------------------------------------------------------+
-
