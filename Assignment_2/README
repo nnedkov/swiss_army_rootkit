@@ -8,9 +8,6 @@
 |                 | of type d/D (initialized writable data), r/R (read-only data) and   |
 |                 | t/T (code) are being considered.                                    |
 +-----------------+---------------------------------------------------------------------+
-| sysmap.h        | header file generated from script `sysmap.sh` run on a 4.1.10       |
-|                 | kernel                                                              |
-+-----------------+---------------------------------------------------------------------+
 | interceptor.c   | a kernel module that hooks the read system call and outputs the     |
 |                 | intercepted data when reading from stdin. Additionaly, when a magic |
 |                 | command gets intercepted it performs a panic-less system reboot.    |
@@ -30,7 +27,7 @@
 | our current directory)                            | $ chmod +x sysmap.sh              |
 |                                                   | $ ./sysmap.sh                     |
 +-----------------+---------------------------------------------------------------------+
-| compile Linux kernel module `simple_module.c`     | $ make                            |
+| compile Linux kernel module `interceptor.c`       | $ make                            |
 +-----------------+---------------------------------------------------------------------+
 | clean directory                                   | $ make clean                      |
 +-----------------+---------------------------------------------------------------------+

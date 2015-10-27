@@ -19,9 +19,9 @@
 #   Date: October 2015                                                        #
 #                                                                             #
 #   Usage: This script will create a header file named `sysmap.h` that maps   #
-#          the kernel symbol names to their addresses in memory. Only         #
-#          symbols of type D (initialized writable data), R (read-only        #
-#          data) and T (code) are being considered.                           #
+#          the kernel symbol names to their addresses in memory. Only symbols #
+#          of type D/d (initialized writable data), R/r (read-only data) and  #
+#          T/t (code) are being considered.                                   #
 #                                                                             #
 ###############################################################################
 

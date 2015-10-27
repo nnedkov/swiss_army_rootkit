@@ -21,13 +21,14 @@
 #                                                                             #
 ###############################################################################
 
-sysmap_gen = sysmap.sh
+SYSMAP_SCRIPT = ./sysmap.sh
+SYSMAP_HEADER = ./sysmap.h
 obj-m += interceptor.o
 
 all:
-	./$(sysmap_gen)
+	./$(SYSMAP_SCRIPT)
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 
 clean:
-	rm sysmap.h
+	rm $(SYSMAP_HEADER)
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean

