@@ -1,0 +1,33 @@
+
++---------------------------------------------------------------------------------------+
+| Files included  | Description                                                         |
++---------------------------------------------------------------------------------------+
++---------------------------------------------------------------------------------------+
+| sysmap.sh       | a bash script that creates a header file named `sysmap.h` that maps |
+|                 | the kernel symbol names to their addresses in memory. Only symbols  |
+|                 | of type d/D (initialized writable data), r/R (read-only data) and   |
+|                 | t/T (code) are being considered.                                    |
++-----------------+---------------------------------------------------------------------+
+| interceptor.c   | a kernel module that hooks the read system call and outputs the     |
+|                 | intercepted data when reading from stdin. Additionaly, when a magic |
+|                 | command gets intercepted it performs a panic-less system reboot.    |
++-----------------+---------------------------------------------------------------------+
+| Makefile        | a Makefile that compiles the module `interceptor.c`                 |
++-----------------+---------------------------------------------------------------------+
+| README          | current file                                                        |
++-----------------+---------------------------------------------------------------------+
+
+
+
++---------------------------------------------------------------------------------------+
+| How to...                                         | Bash command                      |
++---------------------------------------------------------------------------------------+
++---------------------------------------------------------------------------------------+
+| run sysmap.sh script (assuming the script is in   | # add execution permission        |
+| our current directory)                            | $ chmod +x sysmap.sh              |
+|                                                   | $ ./sysmap.sh                     |
++-----------------+---------------------------------------------------------------------+
+| compile Linux kernel module `interceptor.c`       | $ make                            |
++-----------------+---------------------------------------------------------------------+
+| clean directory                                   | $ make clean                      |
++-----------------+---------------------------------------------------------------------+
