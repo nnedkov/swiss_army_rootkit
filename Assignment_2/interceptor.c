@@ -1,3 +1,29 @@
+
+/*******************************************************************************/
+/*                                                                             */
+/*   Course: Rootkit Programming                                               */
+/*   Semester: WS 2015/16                                                      */
+/*   Team: 105                                                                 */
+/*   Assignment: 2                                                             */
+/*                                                                             */
+/*   Filename: interceptor.c                                                   */
+/*                                                                             */
+/*   Authors:                                                                  */
+/*       Name: Matei Pavaluca                                                  */
+/*       Email: mateipavaluca@yahoo.com                                        */
+/*                                                                             */
+/*       Name: Nedko Stefanov Nedkov                                           */
+/*       Email: nedko.stefanov.nedkov@gmail.com                                */
+/*                                                                             */
+/*   Date: October 2015                                                        */
+/*                                                                             */
+/*   Usage: This kernel module hooks the read system call and outputs the      */
+/*          intercepted data when reading from stdin. Additionaly, when a      */
+/*          magic command gets intercepted it performs a panic-less system     */
+/*          reboot.                                                            */
+/*                                                                             */
+/*******************************************************************************/
+
 #include <linux/module.h>   /* Needed by all modules */
 #include <linux/unistd.h>   /* Needed for __NR_read */
 #include <linux/reboot.h>   /* Needed for kernel_restart() */
