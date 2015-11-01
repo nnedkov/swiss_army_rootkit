@@ -5,7 +5,7 @@
 #   Course: Rootkit Programming                                               #
 #   Semester: WS 2015/16                                                      #
 #   Team: 105                                                                 #
-#   Assignment: 2                                                             #
+#   Assignment: 3                                                             #
 #                                                                             #
 #   Filename: sysmap.sh                                                       #
 #                                                                             #

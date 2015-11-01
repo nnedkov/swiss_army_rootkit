@@ -4,7 +4,7 @@
 #   Course: Rootkit Programming                                               #
 #   Semester: WS 2015/16                                                      #
 #   Team: 105                                                                 #
-#   Assignment: 2                                                             #
+#   Assignment: 3                                                             #
 #                                                                             #
 #   Filename: Makefile                                                        #
 #                                                                             #
@@ -17,13 +17,13 @@
 #                                                                             #
 #   Date: October 2015                                                        #
 #                                                                             #
-#   Usage: This Makefile compiles the module `interceptor.c`                  #
+#   Usage: This Makefile compiles the module `process_masker.c`               #
 #                                                                             #
 ###############################################################################
 
 SYSMAP_SCRIPT = ./sysmap.sh
 SYSMAP_HEADER = ./sysmap.h
-obj-m += interceptor.o
+obj-m += process_masker.o
 
 all:
 	$(SYSMAP_SCRIPT)
