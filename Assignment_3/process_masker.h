@@ -25,6 +25,8 @@
 #define __PROCESS_MASKER__
 
 
+#define PIDS_BUFFSIZE 8
+
 struct linux_dirent {
 	long d_ino;
 	off_t d_off;

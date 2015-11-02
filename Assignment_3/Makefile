@@ -34,7 +34,7 @@ clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
 install:	all
-	insmod process_masker.ko
+	insmod process_masker.ko pids=1,2,3
 
 uninstall:
 	rmmod process_masker.ko
