@@ -32,3 +32,11 @@ all:
 clean:
 	rm $(SYSMAP_HEADER)
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+install:	all
+	insmod process_masker.ko
+
+uninstall:
+	rmmod process_masker.ko
+	rm $(SYSMAP_HEADER)
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean

