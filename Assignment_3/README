@@ -3,22 +3,21 @@
 | Files included   | Description                                                         |
 +------------------+---------------------------------------------------------------------+
 +------------------+---------------------------------------------------------------------+
-| sysmap.sh        | a bash script that creates a header file named `sysmap.h` that maps |
+| sysmap.sh        | Bash script that creates a header file named `sysmap.h` that maps   |
 |                  | the kernel symbol names to their addresses in memory. Only symbols  |
 |                  | of type d/D (initialized writable data), r/R (read-only data) and   |
 |                  | t/T (code) are being considered.                                    |
 +------------------+---------------------------------------------------------------------+
-| process_masker.c | a kernel module that hooks the read system call and outputs the     |
-|                  | intercepted data when reading from stdin. Additionaly, when a magic |
-|                  | command gets intercepted it performs a panic-less system reboot.    |
+| process_masker.c | Kernel module that hooks the getdents system call and masks         |
+|                  | processes from the user in a way that they are still scheduled.     |
+|                  | Processes to hide are identified by an array of PIDs passed to the  |
+|                  | module on the command line when loading the module.                 |
 +------------------+---------------------------------------------------------------------+
-| process_masker.h | a kernel module that hooks the read system call and outputs the     |
-|                  | intercepted data when reading from stdin. Additionaly, when a magic |
-|                  | command gets intercepted it performs a panic-less system reboot.    |
+| process_masker.h | Header file for kernel module `process_masker.c`.                   |
 +------------------+---------------------------------------------------------------------+
-| Makefile         | a Makefile that compiles the module `process_masker.c`              |
+| Makefile         | Makefile that compiles kernel module `process_masker.c`             |
 +------------------+---------------------------------------------------------------------+
-| README           | current file                                                        |
+| README           | Current file                                                        |
 +------------------+---------------------------------------------------------------------+
 
 
@@ -31,10 +30,10 @@
 | our current directory)                            | $ chmod +x sysmap.sh                  |
 |                                                   | $ ./sysmap.sh                         |
 +---------------------------------------------------+---------------------------------------+
-| compile Linux kernel module `interceptor.c`       | $ make                                |
+| compile Linux kernel module `process_masker.c`    | $ make                                |
 +---------------------------------------------------+---------------------------------------+
 | clean directory                                   | $ make clean                          |
 +---------------------------------------------------+---------------------------------------+
-| insert module to kernel and specify 1,2 & 3 as    | $ insmod process_masker.ko pids=1,2,3 |
-| PIDS to mask                                      |                                       |
+| insert module process_masker to kernel and        | $ insmod process_masker.ko pids=1,2,3 |
+| specify 1,2 & 3 as PIDS to mask                   |                                       |
 +---------------------------------------------------+---------------------------------------+
