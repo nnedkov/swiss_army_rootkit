@@ -38,7 +38,7 @@ int voila_matched_so_far;   /* Characters of VOILA matched so far */
 
 void disable_write_protect_mode(void);
 void enable_write_protect_mode(void);
-int match_command(char *, char *, int *);
+int count_matches(char *, char *, int *);
 
 #endif
 
