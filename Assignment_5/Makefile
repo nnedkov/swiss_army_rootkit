@@ -23,20 +23,23 @@
 
 SYSMAP_SCRIPT = ./sysmap.sh
 SYSMAP_HEADER = ./sysmap.h
-obj-m += module_masker.o
+
+KDIR = /lib/modules/$(shell uname -r)/build
+TARGET = module_masker
+obj-m += $(TARGET).o
 
 all:	$(SYSMAP_HEADER)
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	make -C $(KDIR) M=$(PWD) modules
 
 clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	make -C $(KDIR) M=$(PWD) clean
 
 install:	all
 	insmod module_masker.ko
 
 uninstall:
 	rmmod module_masker.ko
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	make -C $(KDIR) M=$(PWD) clean
 
 sysmap:
 	$(SYSMAP_SCRIPT)
