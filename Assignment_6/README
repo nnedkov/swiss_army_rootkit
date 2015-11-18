@@ -1,0 +1,48 @@
+
++-----------------+---------------------------------------------------------------------+
+| Files included  | Description                                                         |
++-----------------+---------------------------------------------------------------------+
++-----------------+---------------------------------------------------------------------+
+| socket_masker.c | This module is hiding itself in the kernel context. Specifically,   |
+|                 | it does not show up in /sys/module or in the output of lsmod.       |
+|                 | Additionaly, it hooks the read system call and if the user types    |
+|                 | `ping` the rootkit responds with `pong` in the kernel log. This     |
+|                 | mecahnism is used to check if the rootkit is running. In order to   |
+|                 | unload the module, the module needs to become visible again.        |
+|                 | Therefore, the read system call is hooked to look for yet another   |
+|                 | command, called `unhide`, which makes the module visible.           |
++-----------------+---------------------------------------------------------------------+
+| socket_masker.h | Header file for kernel module `socket_masker.c`.                    |
++-----------------+---------------------------------------------------------------------+
+| sysmap.sh       | Bash script that creates a header file named `sysmap.h` that maps   |
+|                 | the kernel symbol names to their addresses in memory. Only symbols  |
+|                 | of type d/D (initialized writable data), r/R (read-only data) and   |
+|                 | t/T (code) are being considered.                                    |
++-----------------+---------------------------------------------------------------------+
+| Makefile        | Makefile that compiles kernel module `socket_masker.c`              |
++-----------------+---------------------------------------------------------------------+
+| README          | Current file                                                        |
++-----------------+---------------------------------------------------------------------+
+
+
+
++---------------------------------------------------+-----------------------------------+
+| How to...                                         | Bash command                      |
++---------------------------------------------------+-----------------------------------+
++---------------------------------------------------+-----------------------------------+
+| run sysmap.sh script (assuming the script is in   | # add execution permission        |
+| our current directory)                            | $ chmod +x sysmap.sh              |
+|                                                   | $ ./sysmap.sh                     |
++---------------------------------------------------+-----------------------------------+
+| compile Linux kernel module `socket_masker.c`     | $ make                            |
++---------------------------------------------------+-----------------------------------+
+| clean directory                                   | $ make clean                      |
++---------------------------------------------------+-----------------------------------+
+| insert module socket_masker to kernel             | $ insmod socket_masker.ko         |
++---------------------------------------------------+-----------------------------------+
+| remove module socket_masker from kernel           | $ rmmod socket_masker.ko          |
++---------------------------------------------------+-----------------------------------+
+| check if module is running                        | $ ping                            |
++---------------------------------------------------+-----------------------------------+
+| make module visible                               | $ unhide                          |
++---------------------------------------------------+-----------------------------------+
