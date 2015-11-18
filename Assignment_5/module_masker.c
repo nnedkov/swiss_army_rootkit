@@ -37,6 +37,10 @@
 
 
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("A shy rootkit. It hides until you ask it to appear :)") ;
+MODULE_VERSION("0.1");
+MODULE_AUTHOR("Matei<mateipavaluca@yahoo.com>") ;
+MODULE_AUTHOR("Nedko<nedko.stefanov.nedkov@gmail.com>");
 
 
 /* Initialization function which is called when the module is
