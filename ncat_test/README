@@ -1,0 +1,32 @@
+These are 2 scripts that will help you test the ipv4/ipv6 connections.
+
+Requirements:
+	* Allow  port redirection on the virtual machine:
+		-> add these lines to the Makefile
+				-redir tcp:3000::3000\
+				-redir tcp:3001::3001\
+				-redir udp:3002::3002\
+				-redir udp:3003::3003\
+
+	* Install nmap on the virtual machine
+		apt-get install nmap
+
+Contents:
+	* ncat_sv
+		-> must be copied to the virtual machine and run
+	* ncat_cl
+		-> stays on the client machine and is run after ncat_sv
+
+Usage:
+	* run the ncat_sv on the virtual machine, it will open 4 ncat servers
+	that listen by default on ports 3000/3001/3002/3003
+	* run the ncat_cl on the client and write something in the window, you
+	should get what you wrote back
+
+The ipv6 connections to the virtual machine don't work on my machine, I'm not
+sure why. Spawsning the server works ok, but when trying to connect all ipv6
+connections fail. You can test the from inside the virtual machine, after you
+start the servers by running
+	ncat -6 -u ::1 $port
+
+	-u is for udp, if the connection is tcp omit it

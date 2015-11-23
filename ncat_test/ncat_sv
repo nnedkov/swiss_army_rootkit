@@ -1,0 +1,24 @@
+#! /bin/bash
+
+server_ipv4_tcp_port=3000
+server_ipv6_tcp_port=3001
+server_ipv4_udp_port=3002
+server_ipv6_udp_port=3003
+
+function start_sv {
+	prot=$2
+
+	if [ $2 = --tcp ]; then
+		prot=""
+	fi
+
+	echo "Starting ipv"$1 $prot " server on port " $3 "..."
+	ncat -l $3 $1 $prot -k -c 'xargs -n1 echo' &
+}
+
+start_sv -4 --tcp $server_ipv4_tcp_port
+start_sv -6 --tcp $server_ipv6_tcp_port
+start_sv -4 --udp $server_ipv4_udp_port
+start_sv -6 --udp $server_ipv6_udp_port
+
+echo "Done"

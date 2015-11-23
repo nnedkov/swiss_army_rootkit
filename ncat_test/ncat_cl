@@ -1,0 +1,31 @@
+#! /bin/bash
+
+server_ipv4_tcp_port=3000
+server_ipv6_tcp_port=3001
+server_ipv4_udp_port=3002
+server_ipv6_udp_port=3003
+
+local_ipv4=127.0.0.1
+local_ipv6=::1
+
+function start_cl {
+	prot=$2
+
+	if [ $2 = --tcp ]; then
+		prot=""
+	fi
+
+	str="Starting ipv$1 $prot client to $3 on port  $4 ..."
+	cmd="echo $str"
+	cmd="$cmd;""ncat $1 $prot $3 $4"
+	cmd="$cmd;""bash;"
+
+	gnome-terminal -x sh -c "$cmd" &
+}
+
+start_cl -4 --tcp $local_ipv4 $server_ipv4_tcp_port
+start_cl -6 --tcp $local_ipv6 $server_ipv6_tcp_port
+start_cl -4 --udp $local_ipv4 $server_ipv4_udp_port
+start_cl -6 --udp $local_ipv6 $server_ipv6_udp_port
+
+echo "Done"
