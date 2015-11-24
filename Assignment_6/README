@@ -3,14 +3,12 @@
 | Files included  | Description                                                         |
 +-----------------+---------------------------------------------------------------------+
 +-----------------+---------------------------------------------------------------------+
-| socket_masker.c | This module is hiding itself in the kernel context. Specifically,   |
-|                 | it does not show up in /sys/module or in the output of lsmod.       |
-|                 | Additionaly, it hooks the read system call and if the user types    |
-|                 | `ping` the rootkit responds with `pong` in the kernel log. This     |
-|                 | mecahnism is used to check if the rootkit is running. In order to   |
-|                 | unload the module, the module needs to become visible again.        |
-|                 | Therefore, the read system call is hooked to look for yet another   |
-|                 | command, called `unhide`, which makes the module visible.           |
+| socket_masker.c | This module is hiding sockets from user land tools. The sockets     |
+|                 | that are to be hidden should be specified by passing the ports to   |
+|                 | as system arguments when loading the module. This module supports   |
+|                 | UDP and TCP as protocols (for both IPv4 and IPv6 connections) and   |
+|                 | all ports in both (incoming and outgoing) directions. Sockets are   |
+|                 | hidden from system tools like `netstat` and `ss`.
 +-----------------+---------------------------------------------------------------------+
 | socket_masker.h | Header file for kernel module `socket_masker.c`.                    |
 +-----------------+---------------------------------------------------------------------+
@@ -38,11 +36,11 @@
 +---------------------------------------------------+-----------------------------------+
 | clean directory                                   | $ make clean                      |
 +---------------------------------------------------+-----------------------------------+
-| insert module socket_masker to kernel             | $ insmod socket_masker.ko         |
+| insert module socket_masker to kernel and specify | $ insmod socket_masker.ko \       |
+| sockets to be masked                              |   [tcp4_ports=port1,port2,...] \  |
+|                                                   |   [tcp6_ports=port1,port2,...] \  |
+|                                                   |   [udp4_ports=port1,port2,...] \  |
+|                                                   |   [udp6_ports=port1,port2,...]    |
 +---------------------------------------------------+-----------------------------------+
 | remove module socket_masker from kernel           | $ rmmod socket_masker.ko          |
-+---------------------------------------------------+-----------------------------------+
-| check if module is running                        | $ ping                            |
-+---------------------------------------------------+-----------------------------------+
-| make module visible                               | $ unhide                          |
 +---------------------------------------------------+-----------------------------------+

