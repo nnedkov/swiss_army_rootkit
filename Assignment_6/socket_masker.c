@@ -197,7 +197,7 @@ asmlinkage ssize_t my_recvmsg_syscall(int sockfd, struct user_msghdr __user *msg
     count = ret;
 
 	/* Set flag specifying whether message contains data to be masked */
-	found = 0;
+	found = 1;
 
 	/* NLMSG_OK: This macro will return true if a netlink message was received. It
 	   essentially checks whether it's safe to parse the netlink message (if indeed
