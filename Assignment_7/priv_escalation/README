@@ -1,0 +1,5 @@
+This is the base functionality for escalating privileges.
+
+The only problem is that I have to develop a method to test it,
+as currently it just upgrades the current process to root (and if we do
+insmod then the user is already root :)) )
