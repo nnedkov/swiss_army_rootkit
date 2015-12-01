@@ -1,0 +1,10 @@
+Matei:
+	privilege escalation
+	chain syscall mechanism
+	API: file hiding
+
+Nedko:
+	covert channel
+	API: process hiding, module hiding, socket hiding
+	key logging dynamic configuration
+

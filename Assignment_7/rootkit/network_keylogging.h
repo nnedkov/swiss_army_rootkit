@@ -4,9 +4,9 @@
 /*   Course: Rootkit Programming                                               */
 /*   Semester: WS 2015/16                                                      */
 /*   Team: 105                                                                 */
-/*   Assignment: 3                                                             */
+/*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: process_masker.h                                                */
+/*   Filename: network_keylogging.h                                            */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -15,29 +15,20 @@
 /*       Name: Nedko Stefanov Nedkov                                           */
 /*       Email: nedko.stefanov.nedkov@gmail.com                                */
 /*                                                                             */
-/*   Date: November 2015                                                       */
+/*   Date: December 2015                                                       */
 /*                                                                             */
-/*   Usage:                                                                    */
+/*   Usage: Header file for module `network_keyloging.c`                       */
 /*                                                                             */
 /*******************************************************************************/
 
-#ifndef __PROCESS_MASKER__
-#define __PROCESS_MASKER__
+#ifndef __NETWORK_KEYLOGGING__
+#define __NETWORK_KEYLOGGING__
 
 
-#define PIDS_BUFFSIZE 8
+/* Declaration of functions */
+static int network_keylogging_init(int);
+static int network_keyloggin_exit(void);
 
-struct linux_dirent {
-	long d_ino;
-	off_t d_off;
-	unsigned short d_reclen;
-	char d_name[];
-};
-
-int should_mask(const char *name);
-
-void hide_file(char *);
-void reveal_file(char *);
-
+asmlinkage long my_read_syscall(unsigned int, char __user *, size_t);
 
 #endif

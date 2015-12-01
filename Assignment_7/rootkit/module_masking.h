@@ -4,9 +4,9 @@
 /*   Course: Rootkit Programming                                               */
 /*   Semester: WS 2015/16                                                      */
 /*   Team: 105                                                                 */
-/*   Assignment: 5                                                             */
+/*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: module_masker.h                                                 */
+/*   Filename: module_masking.h                                                */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -15,9 +15,9 @@
 /*       Name: Nedko Stefanov Nedkov                                           */
 /*       Email: nedko.stefanov.nedkov@gmail.com                                */
 /*                                                                             */
-/*   Date: November 2015                                                       */
+/*   Date: December 2015                                                       */
 /*                                                                             */
-/*   Usage: Header file for kernel module `module_masker.c`.                   */
+/*   Usage: Header file for module `module_masking.c`                          */
 /*                                                                             */
 /*******************************************************************************/
 
@@ -25,15 +25,11 @@
 #define __MODULE_MASKING__
 
 
-static int module_is_hidden;	/* Current state of module (1 ~> hidden) */
-static struct list_head *module_prev;
-
 /* Declaration of functions */
-void hide_module(void);
-void unhide_module(void);
+static int module_masking_init(int);
+static int module_masking_exit(void);
 
-/* Implementation of functions below is taken from fs/kernfs/dir.c, lines 224-321 */
-static bool kernfs_unlink_sibling(struct kernfs_node *kn);
-static int kernfs_link_sibling(struct kernfs_node *kn);
+static void mask_module(void);
+static void unmask_module(void);
 
 #endif

