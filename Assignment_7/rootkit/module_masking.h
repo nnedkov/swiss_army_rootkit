@@ -26,10 +26,10 @@
 
 
 /* Declaration of functions */
-static int module_masking_init(int);
-static int module_masking_exit(void);
+int module_masking_init(int);
+int module_masking_exit(void);
 
-static void mask_module(void);
-static void unmask_module(void);
+void mask_module(void);
+void unmask_module(void);
 
 #endif

