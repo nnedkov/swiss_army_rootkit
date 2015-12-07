@@ -1,10 +1,14 @@
 Matei:
-	privilege escalation
-	chain syscall mechanism
-	API: file hiding
+	* API: file hiding, privilege escalation
+	* chain syscall mechanism - replace following syscalls:
+		read_syscall:
+			* network_keylogging (network_keylogging_read_syscall -> check network_keylogging.h)
+		getdents_syscall:
+			* process_masking (process_masking_getdents_syscall -> check process_masking.h)
+		recvmsg_syscall:
+			* socket_masking (socket_masking_recvmsg_syscall -> check socket_masking.h)
 
 Nedko:
-	covert channel
-	API: process hiding, module hiding, socket hiding
+	include client for re-configuration via udp_server
 	key logging dynamic configuration
 
