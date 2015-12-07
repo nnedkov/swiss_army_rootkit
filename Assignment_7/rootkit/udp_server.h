@@ -6,7 +6,7 @@
 /*   Team: 105                                                                 */
 /*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: process_masking.h                                               */
+/*   Filename: udp_server.h                                                    */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -17,21 +17,16 @@
 /*                                                                             */
 /*   Date: December 2015                                                       */
 /*                                                                             */
-/*   Usage: Header file for module `process_masking.c`                         */
+/*   Usage: Header file for module `udp_server.c`                              */
 /*                                                                             */
 /*******************************************************************************/
 
-#ifndef __PROCESS_MASKING__
-#define __PROCESS_MASKING__
+#ifndef __UDP_SERVER__
+#define __UDP_SERVER__
 
 
 /* Declaration of functions */
-int process_masking_init(int);
-int process_masking_exit(void);
-
-asmlinkage int process_masking_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
-
-int mask_process(pid_t);
-int unmask_process(pid_t);
+int udp_server_init(int);
+int udp_server_exit(void);
 
 #endif

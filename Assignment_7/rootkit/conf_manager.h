@@ -6,7 +6,7 @@
 /*   Team: 105                                                                 */
 /*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: covert_channel.h                                                */
+/*   Filename: conf_manager.h                                                  */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -17,18 +17,18 @@
 /*                                                                             */
 /*   Date: December 2015                                                       */
 /*                                                                             */
-/*   Usage: Header file for module `covert_channel.c`                          */
+/*   Usage: Header file for module `conf_manager.c`                            */
 /*                                                                             */
 /*******************************************************************************/
 
-#ifndef __COVERT_CHANNEL__
-#define __COVERT_CHANNEL__
+#ifndef __CONF_MANAGER__
+#define __CONF_MANAGER__
 
 
 /* Declaration of functions */
-int covert_channel_init(int);
-int covert_channel_exit(void);
+int conf_manager_init(int);
+int conf_manager_exit(void);
 
-asmlinkage long covert_channel_read_syscall(unsigned int, char __user *, size_t);
+int update_conf(char *);
 
 #endif

