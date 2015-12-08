@@ -204,8 +204,6 @@ void register_callback(unsigned int callback_nr, void *callback)
 		return;
 	}
 
-	PRINT("INSERT\n");
-
 	cb->cb = callback;
 	list_add(&(cb->list), to_insert);
 }
