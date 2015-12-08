@@ -30,7 +30,7 @@
 
 #include <linux/module.h>		/* Needed by all kernel modules */
 #include <linux/list.h>			/* Needed for linked list interface */
-
+#include <linux/kernfs.h>
 
 /*******************************************************************************/
 /*                                                                             */

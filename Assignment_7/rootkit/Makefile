@@ -32,7 +32,7 @@ rootkit-objs := module_masking.o network_keylogging.o privil_escalation.o proces
 ccflags-y = -Wno-unused-function
 #file_masking.o
 
-all:	$(SYSMAP_HEADER)
+all:	sysmap
 	make -C $(KDIR) M=$(PWD) modules
 	@echo "Rootkit successfully compiled"
 

