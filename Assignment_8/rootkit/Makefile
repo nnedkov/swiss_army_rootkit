@@ -4,7 +4,7 @@
 #   Course: Rootkit Programming                                               #
 #   Semester: WS 2015/16                                                      #
 #   Team: 105                                                                 #
-#   Assignment: 3                                                             #
+#   Assignment: 7                                                             #
 #                                                                             #
 #   Filename: Makefile                                                        #
 #                                                                             #
@@ -15,30 +15,41 @@
 #       Name: Nedko Stefanov Nedkov                                           #
 #       Email: nedko.stefanov.nedkov@gmail.com                                #
 #                                                                             #
-#   Date: October 2015                                                        #
+#   Date: December 2015                                                       #
 #                                                                             #
-#   Usage: This Makefile compiles the module `process_masker.c`               #
+#   Usage: This Makefile compiles the module `rootkit.c`                      #
 #                                                                             #
 ###############################################################################
 
 SYSMAP_SCRIPT = ./sysmap.sh
 SYSMAP_HEADER = ./sysmap.h
-obj-m += rootkit.o
-rootkit-objs := core.o netlog_interceptor.o process_masker.o
 
-all:
-	$(SYSMAP_SCRIPT)
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+KDIR = /lib/modules/$(shell uname -r)/build
+TARGET = rootkit
+
+obj-m += $(TARGET).o
+rootkit-objs := module_masking.o network_keylogging.o privil_escalation.o process_masking.o socket_masking.o conf_manager.o jsmn.o udp_server.o file_masking.o core.o
+ccflags-y = -Wno-unused-function
+#file_masking.o
+
+all:	sysmap
+	make -C $(KDIR) M=$(PWD) modules
+	@echo "Rootkit successfully compiled"
 
 clean:
-	rm $(SYSMAP_HEADER)
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	make -C $(KDIR) M=$(PWD) clean
+	@echo "Useless files successfully deleted"
 
 install:	all
-	insmod rootkit.ko
+	insmod $(TARGET).ko
+	@echo "Rootkit successfully installed"
 
 uninstall:
-#	rmmod process_masker.ko
-	rm $(SYSMAP_HEADER)
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	rmmod $(TARGET).ko
+	make -C $(KDIR) M=$(PWD) clean
+	@echo "Rootkit successfully uninstalled"
+
+sysmap:
+	$(SYSMAP_SCRIPT)
+	@echo "Sysmap header file successfully created"
 

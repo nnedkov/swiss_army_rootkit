@@ -4,7 +4,7 @@
 #   Course: Rootkit Programming                                               #
 #   Semester: WS 2015/16                                                      #
 #   Team: 105                                                                 #
-#   Assignment: 3                                                             #
+#   Assignment: 8                                                             #
 #                                                                             #
 #   Filename: Makefile                                                        #
 #                                                                             #
@@ -15,29 +15,39 @@
 #       Name: Nedko Stefanov Nedkov                                           #
 #       Email: nedko.stefanov.nedkov@gmail.com                                #
 #                                                                             #
-#   Date: October 2015                                                        #
+#   Date: December 2015                                                       #
 #                                                                             #
-#   Usage: This Makefile compiles the module `process_masker.c`               #
+#   Usage: This Makefile compiles the module `packet_masker.c`                #
 #                                                                             #
 ###############################################################################
 
 SYSMAP_SCRIPT = ./sysmap.sh
 SYSMAP_HEADER = ./sysmap.h
-obj-m += file_masker.o
 
-all:
-	$(SYSMAP_SCRIPT)
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+KDIR = /lib/modules/$(shell uname -r)/build
+TARGET = packet_masker
+
+obj-m += $(TARGET).o
+ccflags-y = -Wno-unused-function
+
+all:	sysmap
+	make -C $(KDIR) M=$(PWD) modules
+	@echo "\nPacket masker successfully compiled\n"
 
 clean:
-	rm $(SYSMAP_HEADER)
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	make -C $(KDIR) M=$(PWD) clean
+	@echo "\nUseless files successfully deleted\n"
 
 install:	all
-	insmod file_masker.ko
+	insmod $(TARGET).ko
+	@echo "\nPacket masker successfully installed\n"
 
 uninstall:
-	rmmod file_masker.ko
-	rm $(SYSMAP_HEADER)
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	rmmod $(TARGET).ko
+	make -C $(KDIR) M=$(PWD) clean
+	@echo "\nPacket masker successfully uninstalled\n"
+
+sysmap:
+	$(SYSMAP_SCRIPT)
+	@echo "\nSysmap header file successfully created\n"
 

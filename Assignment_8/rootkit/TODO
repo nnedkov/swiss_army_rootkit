@@ -1,0 +1,5 @@
+* file hiding (1st argument doesn't work)
+* write python client for reconfiguration
+* fix key logging
+* dynamic configuration for key logging
+* write README

