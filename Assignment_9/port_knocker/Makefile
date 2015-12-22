@@ -21,8 +21,6 @@
 #                                                                             #
 ###############################################################################
 
-SYSMAP_SCRIPT = ./sysmap.sh
-SYSMAP_HEADER = ./sysmap.h
 
 KDIR = /lib/modules/$(shell uname -r)/build
 TARGET = port_knocker
@@ -30,7 +28,7 @@ TARGET = port_knocker
 obj-m += $(TARGET).o
 ccflags-y = -Wno-unused-function
 
-all:	sysmap
+all:
 	make -C $(KDIR) M=$(PWD) modules
 	@echo "\nPort knocker successfully compiled\n"
 
@@ -46,8 +44,4 @@ uninstall:
 	rmmod $(TARGET).ko
 	make -C $(KDIR) M=$(PWD) clean
 	@echo "\nPort knocker successfully uninstalled\n"
-
-sysmap:
-	$(SYSMAP_SCRIPT)
-	@echo "\nSysmap header file successfully created\n"
 
