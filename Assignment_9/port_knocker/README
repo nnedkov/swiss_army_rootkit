@@ -1,0 +1,40 @@
+
++-----------------+---------------------------------------------------------------------+
+| Files included  | Description                                                         |
++-----------------+---------------------------------------------------------------------+
++-----------------+---------------------------------------------------------------------+
+| packet_masker.c | This modules hides all TCP or UDP traffic from or to from the       |
+|                 | address that's given as an input to the kernel module. The necessary|
+|                 | functions are highjacked and our functions are executed first.      |
++-----------------+---------------------------------------------------------------------+
+| packet_masker.h | Header file for kernel module `packet_masker.c`.                    |
++-----------------+---------------------------------------------------------------------+
+| sysmap.sh       | Bash script that creates a header file named `sysmap.h` that maps   |
+|                 | the kernel symbol names to their addresses in memory. Only symbols  |
+|                 | of type d/D (initialized writable data), r/R (read-only data) and   |
+|                 | t/T (code) are being considered.                                    |
++-----------------+---------------------------------------------------------------------+
+| Makefile        | Makefile that compiles kernel module `packet_masker.c`              |
++-----------------+---------------------------------------------------------------------+
+| README          | Current file                                                        |
++-----------------+---------------------------------------------------------------------+
+
+
+
++---------------------------------------------------+-----------------------------------+
+| How to...                                         | Bash command                      |
++---------------------------------------------------+-----------------------------------+
++---------------------------------------------------+-----------------------------------+
+| run sysmap.sh script (assuming the script is in   | # add execution permission        |
+| our current directory)                            | $ chmod +x sysmap.sh              |
+|                                                   | $ ./sysmap.sh                     |
++---------------------------------------------------+-----------------------------------+
+| compile Linux kernel module `packet_masker.c`     | $ make                            |
++---------------------------------------------------+-----------------------------------+
+| clean directory                                   | $ make clean                      |
++---------------------------------------------------+-----------------------------------+
+| insert module packet_masker to kernel and specify | $ insmod packet_masker.ko \       |
+| IPS to be masked                                  |   [ip_addr=x.x.x.x] \             |
++---------------------------------------------------+-----------------------------------+
+| remove module packet_masker from kernel           | $ rmmod packet_masker.ko          |
++---------------------------------------------------+-----------------------------------+
