@@ -119,7 +119,7 @@ static int parse_json(char *json_str)
 		return 1;
 	}
 
-	DEBUG_PRINT("received JSON");
+	DEBUG_PRINT("received new configuration");
 	/* Loop over all keys of the root object */
 	for (i=1 ; i<r ; i++)
 		if (!jsoneq(json_str, &t[i], "hide_module")) {

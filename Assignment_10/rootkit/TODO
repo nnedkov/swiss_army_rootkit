@@ -1,5 +1,3 @@
-udp_server.*
-
 TO FIX:
 	* replace INIT_LIST_HEAD with LIST_HEAD
 	* data_should_be_masked in socket_masking.c

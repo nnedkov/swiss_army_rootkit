@@ -39,7 +39,7 @@
 /* Definition of macros */
 #define PRINT(str) printk(KERN_INFO "rootkit socket_masking: %s\n", (str))
 #define DEBUG_PRINT(str) if (show_debug_messages) PRINT(str)
-#define PRINT_SOCKET(protocol, port) printk(KERN_INFO "rootkit process_masking: masking socket (%s, %d)\n", (protocol), (port))
+#define PRINT_SOCKET(protocol, port) printk(KERN_INFO "rootkit socket_masking: masking socket (%s, %d)\n", (protocol), (port))
 #define DEBUG_PRINT_SOCKET(protocol, port) if (show_debug_messages) PRINT_SOCKET(protocol, port)
 
 
