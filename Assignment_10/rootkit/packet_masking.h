@@ -6,7 +6,7 @@
 /*   Team: 105                                                                 */
 /*   Assignment: 10                                                            */
 /*                                                                             */
-/*   Filename: core.h                                                          */
+/*   Filename: packet_masking.h                                                */
 /*                                                                             */
 /*   Authors:                                                                  */
 /*       Name: Matei Pavaluca                                                  */
@@ -17,18 +17,19 @@
 /*                                                                             */
 /*   Date: January 2016                                                        */
 /*                                                                             */
-/*   Usage: Header file for `core.c`                                           */
+/*   Usage: Header file for module `packet_masking.c`                          */
 /*                                                                             */
 /*******************************************************************************/
 
-#ifndef __CORE_H__
-#define __CORE_H__
+#ifndef __PACKET_MASKING__
+#define __PACKET_MASKING__
 
 
-void register_callback(unsigned int, void *);
-void deregister_callback(unsigned int, void *);
+/* Declaration of functions */
+int packet_masking_init(int);
+int packet_masking_exit(void);
 
-void disable_write_protect_mode(void);
-void enable_write_protect_mode(void);
+int mask_packets(char *);
+int unmask_packets(char *);
 
 #endif

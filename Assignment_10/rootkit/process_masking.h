@@ -26,7 +26,7 @@
 
 
 /* Declaration of functions */
-int process_masking_init(int);
+int process_masking_init(int, pid_t *, int);
 int process_masking_exit(void);
 
 int mask_process(pid_t);

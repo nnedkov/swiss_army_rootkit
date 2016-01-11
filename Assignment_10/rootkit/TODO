@@ -1,3 +1,16 @@
+integrate packet masker
+integrate port knocker
+priviledge escalation for remote_shell_provider
+
+
 TO FIX:
 	* replace INIT_LIST_HEAD with LIST_HEAD
 	* data_should_be_masked in socket_masking.c
+	* TODOs
+	* in remote_shell_provider trap killing signals (CTRL+C)
+
+
+HIDE 3 NETWORK CONNECTIONS:
+	* remote shell: socket (hide remote socket), packets
+	* config: socket, packets
+	* port knocker: socket

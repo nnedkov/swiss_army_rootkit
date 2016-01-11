@@ -26,7 +26,7 @@
 
 
 /* Declaration of functions */
-int conf_manager_init(int);
+int conf_manager_init(int, int);
 int conf_manager_exit(void);
 
 int update_conf(char *);

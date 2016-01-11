@@ -1,0 +1,1 @@
+* Listen for the shell:  nc -l -p 20000 -vvv
