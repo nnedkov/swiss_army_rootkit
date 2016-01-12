@@ -26,6 +26,8 @@
 #include <linux/netfilter_ipv4.h>			/* Needed for NF_IP_PRI_FIRST */
 #include <net/netfilter/ipv4/nf_reject.h>	/* Needed for nf_send_reset */
 
+#include "packet_masking.h"					/* Needed for ... */
+
 
 /*******************************************************************************/
 /*                                                                             */
@@ -102,6 +104,8 @@ int port_knocking_init(int debug_mode_on, char *pk_ip, int pk_port)
 	ret = load_port_knocking();
 	if (ret < 0)
 		return ret;
+
+	mask_packets(pk_ip);
 
 	DEBUG_PRINT("initialized");
 

