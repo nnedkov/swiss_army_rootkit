@@ -36,8 +36,8 @@
 #define PRINT(str) printf("remote_shell_provider: %s\n", (str))
 #define DEBUG_PRINT(str) if (SHOW_DEBUG_MESSAGES) PRINT(str)
 #define BASH_EXEC "/bin/bash"
-#define REMOTE_ADDR "127.0.0.1"
-#define REMOTE_PORT "20000"
+#define REMOTE_ADDR "131.159.50.189"
+#define REMOTE_PORT "10000"
 
 
 /* Definition of global variables */

