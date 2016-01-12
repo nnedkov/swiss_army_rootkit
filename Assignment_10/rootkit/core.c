@@ -52,7 +52,7 @@ MODULE_AUTHOR("Nedko<nedko.stefanov.nedkov@gmail.com>");
 
 
 /* Definition of macros */
-#define DEBUG_MODE_IS_ON 1
+#define DEBUG_MODE_IS_ON 0
 #define LOCALHOST "127.0.0.1"
 #define PIDS_BUFFSIZE 8
 #define PRINT(str) printk(KERN_INFO "rootkit core: %s\n", (str))

