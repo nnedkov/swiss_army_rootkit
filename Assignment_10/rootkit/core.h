@@ -31,6 +31,5 @@ void deregister_callback(unsigned int, void *);
 void disable_write_protect_mode(void);
 void enable_write_protect_mode(void);
 
-void unload_module();
-
+void unload_module(void);
 #endif

